@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment_permissions": "Permissions define which tools Claude Code can use without prompting. Add deny rules for sensitive paths.",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git checkout:*)",
+      "Bash(git fetch:*)",
+      "Bash(git stash:*)",
+      "Bash(git rebase:*)",
+      "Bash(git merge:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh issue:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:*)",
+      "Bash(npm test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run gen:types)",
+      "Bash(npm run tauri:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(cd frontend && npm:*)",
+      "Bash(cd frontend && npx:*)",
+      "Bash(cd sidecar && pytest:*)",
+      "Bash(cd sidecar && ruff:*)",
+      "Bash(cd sidecar && mypy:*)",
+      "Bash(cd sidecar && python:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(python scripts/:*)",
+      "Bash(python docs/:*)",
+      "Bash(bash scripts/:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(:* | sh)",
+      "Bash(curl:* | bash)",
+      "Bash(wget:* | bash)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push * main:*)",
+      "Bash(git push * dev:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Read(/Users/**/.ssh/**)",
+      "Read(/Users/**/.aws/**)",
+      "Read(/Users/**/.config/gh/**)",
+      "Read(/home/**/.ssh/**)",
+      "Read(/home/**/.aws/**)",
+      "Read(/home/**/.config/gh/**)",
+      "Write(**/.env)",
+      "Write(**/.env.local)",
+      "Write(**/*.key)",
+      "Write(**/*.pem)",
+      "Edit(**/.env)",
+      "Edit(**/.env.local)",
+      "Edit(docs/MONOLITHIC/**)"
+    ]
+  },
+  "_comment_hooks": "Hooks fire during Claude Code's agentic loop. These enforce rules on Claude Code's behavior, separate from git hooks which enforce rules on the repo.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "_comment": "Block direct edits to generated shared-types files - they come from scripts/generate_types.py",
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/scripts/hooks/guard-generated-files.sh"
+          }
+        ]
+      },
+      {
+        "_comment": "Block pushes to protected branches (main, dev)",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/scripts/hooks/guard-protected-branches.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "_comment": "Auto-regenerate TypeScript types when Pydantic schemas change",
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/scripts/hooks/regen-types-on-schema-change.sh"
+          }
+        ]
+      },
+      {
+        "_comment": "Run ruff format on edited Python files",
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/scripts/hooks/format-python-on-edit.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "_comment": "Inject current branch and phase context at session start",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/scripts/hooks/session-context.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "_comment": "Remind about uncommitted changes when Claude finishes a response",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/scripts/hooks/stop-uncommitted-reminder.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,142 @@
+# pre-commit framework configuration
+# Install: pip install pre-commit && pre-commit install && pre-commit install --hook-type pre-push
+# See: https://pre-commit.com/
+#
+# These hooks run on git commit and git push. They enforce the rules in
+# CODING_STANDARDS.md at the repo boundary — nothing broken enters the repo.
+#
+# These are DIFFERENT from the Claude Code hooks in .claude/settings.json.
+# Claude Code hooks fire during Claude Code's agentic loop to guide its behavior;
+# git hooks fire at commit/push time to enforce repo invariants regardless of
+# who (or what) is committing.
+
+default_language_version:
+  python: python3.12
+
+# Enforce strict mode — no hook failure is advisory.
+fail_fast: false
+
+repos:
+  # --- Generic file hygiene ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'  # markdown trailing 2-space can be intentional
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        exclude: 'tsconfig.*\.json$'  # Tauri's tsconfig files allow comments
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=2000']
+        exclude: '\.glb$|\.package$|\.blend$'  # binary assets are Git LFS
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # --- Python: ruff (lint + format) ---
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        args: ['--fix']
+        files: '^(sidecar/|scripts/).*\.py$'
+      - id: ruff-format
+        files: '^(sidecar/|scripts/).*\.py$'
+
+  # --- Python: mypy strict type check ---
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        files: '^sidecar/.*\.py$'
+        args: ['--strict', '--config-file=sidecar/pyproject.toml']
+        additional_dependencies:
+          - pydantic>=2.0
+          - structlog
+          - types-PyYAML
+
+  # --- TypeScript: eslint + tsc (local hooks since we need node context) ---
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (frontend)
+        entry: bash -c 'cd frontend && npm run lint -- --no-warn-ignored'
+        language: system
+        files: '^frontend/.*\.(ts|tsx)$'
+        pass_filenames: false
+
+      - id: tsc
+        name: tsc --noEmit (frontend)
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        language: system
+        files: '^frontend/.*\.(ts|tsx)$'
+        pass_filenames: false
+
+  # --- Codegen sync: block commits where Pydantic schemas changed but TS types are stale ---
+  - repo: local
+    hooks:
+      - id: codegen-sync
+        name: codegen sync (Pydantic → TypeScript)
+        entry: bash scripts/hooks/check-codegen-sync.sh
+        language: system
+        files: '^sidecar/aisc/schemas/.*\.py$|^shared-types/.*$|^scripts/generate_types\.py$'
+        pass_filenames: false
+
+  # --- Conventional commit message format (runs on commit-msg stage) ---
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - refactor
+          - docs
+          - test
+          - chore
+          - build
+          - ci
+          - perf
+          - style
+
+  # --- Branch naming enforcement ---
+  - repo: local
+    hooks:
+      - id: branch-name
+        name: branch name format
+        entry: bash scripts/hooks/check-branch-name.sh
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false
+
+  # --- Pre-push: full test suite ---
+  - repo: local
+    hooks:
+      - id: pytest-full
+        name: full Python test suite (pre-push)
+        entry: bash -c 'cd sidecar && pytest -q'
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false
+
+      - id: vitest-full
+        name: full TypeScript test suite (pre-push)
+        entry: bash -c 'cd frontend && npm test -- --run'
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false
+
+      - id: integration-tests
+        name: integration tests (pre-push)
+        entry: bash -c 'cd sidecar && pytest -q -m integration'
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false

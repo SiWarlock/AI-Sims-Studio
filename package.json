@@ -1,0 +1,23 @@
+{
+  "name": "ai-sims-creator",
+  "private": true,
+  "version": "0.0.0",
+  "description": "AI-assisted Sims 4 custom content collection creator (Tauri v2 + React + Python sidecar).",
+  "workspaces": [
+    "frontend",
+    "shared-types"
+  ],
+  "scripts": {
+    "tauri:dev": "npm run tauri:dev --workspace=frontend",
+    "tauri:build": "npm run tauri:build --workspace=frontend",
+    "build:macos": "bash scripts/build.sh",
+    "build:windows": "pwsh -ExecutionPolicy Bypass -File scripts/build.ps1",
+    "gen:types": "python scripts/generate_types.py",
+    "lint": "npm run lint --workspace=frontend",
+    "test": "npm run test --workspace=frontend -- --run"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

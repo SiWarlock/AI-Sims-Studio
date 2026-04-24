@@ -84,7 +84,7 @@ These are rules tooling cannot fully enforce. Violating them is a merge-blocker 
 ### Style and formatting
 
 - **Formatter:** `prettier` (config in `frontend/`).
-- **Linter:** `eslint` with the rule set pinned in `frontend/.eslintrc.cjs`.
+- **Linter:** `eslint` with the rule set pinned in `frontend/eslint.config.js`.
 - **Type checker:** `tsc --noEmit`. Strict mode. Zero errors allowed.
 - **Line length:** 100 characters.
 - **Indentation:** 2 spaces.
@@ -244,7 +244,7 @@ Quick reference for where to add new things:
 - **Python type checker:** `pyproject.toml` under `[tool.mypy]`
 - **Python tests:** `pyproject.toml` under `[tool.pytest.ini_options]`
 - **TypeScript type checker:** `frontend/tsconfig.json`
-- **TypeScript linter:** `frontend/.eslintrc.cjs`
+- **TypeScript linter:** `frontend/eslint.config.js` (ESLint 9 flat config)
 - **TypeScript formatter:** `frontend/.prettierrc`
 - **Tauri config:** `frontend/src-tauri/tauri.conf.json`
 

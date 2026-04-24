@@ -1,0 +1,30 @@
+# Git LFS — template binary assets
+templates/**/*.glb filter=lfs diff=lfs merge=lfs -text
+templates/**/*.blend filter=lfs diff=lfs merge=lfs -text
+templates/**/*.fbx filter=lfs diff=lfs merge=lfs -text
+
+# Force LF line endings for text files across platforms
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.rs text eol=lf
+
+# Windows script stays CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary files (explicit)
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.dds binary
+*.package binary

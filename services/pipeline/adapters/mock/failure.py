@@ -3,9 +3,10 @@
 A typed ``FailurePlan`` (a list of ``FailureRule``s keyed by operation + 1-based call index) tells
 a mock to fail deterministically; ``envelope_for`` builds a valid ``ErrorEnvelope`` for any of the
 13 ``ErrorCode``s with a sensible category + retryable classification (transient ⟹ retryable;
-``PROVIDER_AUTH_QUOTA`` terminal). ``ProviderError`` is the pipeline-local sync error channel
-(the §7 ``LLMProvider`` calls have no error field, so they raise) — Phase-3 real adapters may hoist
-it to a neutral ``adapters/errors.py``.
+``PROVIDER_AUTH_QUOTA`` terminal). ``ProviderError`` (the pipeline-local sync error channel — the
+§7 ``LLMProvider`` calls have no error field, so they raise) now lives in the neutral
+``adapters/errors.py`` (hoisted in 3.3 so a Phase-2 engine path can catch it without importing a
+mock module); it is re-imported and re-exported here so the mock surface is unchanged.
 """
 
 from __future__ import annotations
@@ -14,6 +15,16 @@ from enum import StrEnum
 
 from aisims_contracts.error import ErrorCategory, ErrorCode, ErrorEnvelope
 from pydantic import BaseModel, ConfigDict, Field
+
+from adapters.errors import ProviderError
+
+__all__ = [
+    "FailurePlan",
+    "FailureRule",
+    "MockOp",
+    "ProviderError",
+    "envelope_for",
+]
 
 
 class MockOp(StrEnum):
@@ -50,18 +61,6 @@ class FailurePlan(BaseModel):
             if rule.operation is operation and rule.at_call == call_index:
                 return rule.code
         return None
-
-
-class ProviderError(Exception):
-    """The sync provider error channel (§17 / 0.8-Q5): wraps an ``ErrorEnvelope``.
-
-    Pipeline-local — the contract defines the error *data* (``ErrorEnvelope``); the sync-call error
-    *channel* is a sidecar concern. Raised by ``LLMProvider.complete``/``structured`` on failure.
-    """
-
-    def __init__(self, envelope: ErrorEnvelope) -> None:
-        super().__init__(f"{envelope.code}: {envelope.creatorMessage}")
-        self.envelope = envelope
 
 
 # Per-code taxonomy: (category, retryable, creatorMessage, maintainerDetail). Covers every

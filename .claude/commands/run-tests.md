@@ -1,34 +1,102 @@
 ---
-description: Run the full Python and TypeScript test suites and report results. Optionally scope to a specific module by passing a path.
-argument-hint: [optional module path]
-allowed-tools: Bash, Read
+description: Run tests by class. cwd-aware. Usage: /run-tests [unit|integration|all]
+allowed-tools: Bash
+argument-hint: "[unit|integration|all]"
 ---
 
-Run the project test suites.
+Run tests by class. **cwd-aware** — runs the right test runner for whichever code area you're in.
 
-If `$ARGUMENTS` is provided, scope tests to that module. Examples:
-- `/run-tests sidecar/aisc/storage` → only storage tests
-- `/run-tests frontend/src/components/CollectionBoard` → only that component's tests
-- `/run-tests` (no args) → full suite
+Argument: `$ARGUMENTS` — see the mapping table(s) below. Default: `unit`.
 
-Execute:
+## Step 0 — Detect mode
 
-1. **Python tests:**
-   - If args indicate a Python path: `!cd sidecar && pytest -q <path>`
-   - Otherwise: `!cd sidecar && pytest -q`
-   - Include coverage: append `--cov=aisc --cov-report=term-missing` if no specific path
-2. **TypeScript tests:**
-   - If args indicate a TS path: `!cd frontend && npm test -- --run <path>`
-   - Otherwise: `!cd frontend && npm test -- --run`
-3. **Integration tests** (only if running full suite without args):
-   - `!cd sidecar && pytest -q -m integration`
+```bash
+case "$(pwd)" in
+  */desktop|*/desktop/*)     MODE=the\ desktop\ UI ;;
+  */pipeline|*/pipeline/*)   MODE=the\ Python\ pipeline\ sidecar ;;
+  */export|*/export/*)       MODE=the\ Sims\ DBPF\ export\ worker ;;
+  */blender|*/blender/*)     MODE=the\ Blender\ mesh/GEOM\ worker\ \(bpy\) ;;
+  */contracts|*/contracts/*) MODE=the\ shared\ contracts\ package\ \(pydantic→TS\ codegen\) ;;
+  */evals|*/evals/*)         MODE=the\ eval\ harnesses\ \(LangSmith-native\ +\ metric\ layer\) ;;
+  *)                         MODE=unknown ;;
+esac
+```
+
+Announce the detected mode before running. If `MODE=unknown` (repo root or unrecognized directory), surface the cwd and ask which area before running.
+
+---
+
+## the desktop UI mode mapping
+
+| Argument | Command |
+|---|---|
+| (empty / `unit`) | `pnpm test:run` |
+| `integration` | `pnpm test:run` (integration suite) |
+| `all` | `pnpm test:run` |
+| `<path>` | `pnpm test:run <path>` |
+
+## the Python pipeline sidecar mode mapping
+
+| Argument | Command |
+|---|---|
+| (empty / `unit`) | `uv run pytest -m unit` |
+| `integration` | `uv run pytest -m integration` |
+| `all` | `uv run pytest` |
+| `<path>` | `uv run pytest <path> -v` |
+
+## the Sims DBPF export worker mode mapping
+
+| Argument | Command |
+|---|---|
+| (empty / `unit`) | `pnpm test:run` |
+| `integration` | `pnpm test:run` (integration suite) |
+| `all` | `pnpm test:run` |
+| `<path>` | `pnpm test:run <path>` |
+
+## the Blender mesh/GEOM worker (bpy) mode mapping
+
+| Argument | Command |
+|---|---|
+| (empty / `unit`) | `uv run pytest -m unit` |
+| `integration` | `blender --background` integration suite (`uv run pytest -m integration`) |
+| `all` | `uv run pytest` |
+| `<path>` | `uv run pytest <path> -v` |
+
+## the shared contracts package (pydantic→TS codegen) mode mapping
+
+| Argument | Command |
+|---|---|
+| (empty / `unit`) | `uv run pytest -m unit` |
+| `snapshot` | `uv run pytest -m snapshot` |
+| `all` | `uv run pytest` |
+| `<path>` | `uv run pytest <path> -v` |
+
+## the eval harnesses (LangSmith-native + metric layer) mode mapping
+
+| Argument | Command |
+|---|---|
+| (empty / `unit`) | `uv run pytest -m unit` |
+| `eval` | `uv run pytest -m langsmith` |
+| `all` | `uv run pytest` |
+| `<path>` | `uv run pytest <path> -v` |
+
+If an argument names a class that belongs to a *different* mode, **ERROR** with a clear message naming the expected cwd.
+
+---
+
+<!-- ▼ EXAMPLE BLOCK [id=test-class-discipline-notes]: test-class discipline notes — OPTIONAL. Some test classes
+     need preconditions (a live external dependency, an env var, a slow browser).
+     The source project documented things like: "the live-attack class needs a
+     reachable target + a bearer env var, else it skips with a clear message;"
+     "the visual-smoke class is slow — run per-PR, not per-commit." Add the
+     project's own per-class discipline notes here, or delete this block. ▼ -->
+<!-- ▲ END EXAMPLE BLOCK [id=test-class-discipline-notes] ▲ -->
+
+## Output
 
 Report:
-
-- Pass/fail counts per suite
-- Any skipped tests with reasons
-- Coverage summary (if computed)
-- Any flaky tests that failed then passed on retry — flag explicitly, these need investigation
-- Total runtime
-
-If any tests fail, show the failing test names and first few lines of error output. Do not attempt to fix failures — this command only reports.
+- Mode (which code area)
+- Test count + class
+- Pass / fail counts
+- First ~20 lines of any failure
+- Total duration

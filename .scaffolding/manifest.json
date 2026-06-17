@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 2,
+  "scaffoldingRepo": "git@github.com:SiWarlock/claude-code-tdd-agent-crew-scaffold.git",
+  "generatedFromSha": "491dfb02132f912c0c442e912ad4aa6b7d08dcf2",
+  "generatedFromRef": "main",
+  "generatorModel": "claude-opus-4-8",
+  "generatedAt": "2026-06-16T00:00:00Z",
+  "lastUpgradedFromSha": null,
+  "lastUpgradedAt": null,
+  "mode": "team",
+  "posture": "production-grade",
+  "track": null,
+  "tracks": [
+    "contract",
+    "spikes",
+    "core",
+    "providers",
+    "mesh-export",
+    "ui",
+    "obs-evals"
+  ],
+  "optionalCommands": [
+    "eval",
+    "trace"
+  ],
+  "optionalSubagents": [
+    "code-quality-reviewer",
+    "security-reviewer",
+    "reachability-auditor",
+    "arch-drift-auditor",
+    "brief-drafter"
+  ],
+  "placeholders": {
+    "PROJECT_NAME": "AI Sims Creator",
+    "PROJECT_TAGLINE": "A local-first desktop studio that turns a prompt into installable, in-game-placeable Sims 4 Build/Buy custom content.",
+    "ARCH_DOC": "ARCHITECTURE.md",
+    "TASK_TRACKER": "IMPLEMENTATION_PLAN.md",
+    "REPO_DIRNAME": "AISimsStudio",
+    "GIT_REMOTE": "origin",
+    "AI_TRAILER": "Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>",
+    "PHASE_IDS": "0 / 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 / 10 (tasks N.M)",
+    "SECURITY_REVIEW_POLICY": "invariant",
+    "CODE_QUALITY_REVIEW_POLICY": "every-slice"
+  },
+  "codeAreas": [
+    {
+      "CODE_AREA": "apps/desktop/",
+      "CODE_AREA_NAME": "the desktop UI",
+      "CODE_AREA_BASENAME": "desktop",
+      "RUNTIME": "Node 22 LTS",
+      "PKG_MANAGER": "pnpm",
+      "FRAMEWORK": "React 19 + Vite + Electron",
+      "VALIDATION_LIB": "Zod",
+      "LINT": "ESLint",
+      "TYPECHECKER": "tsc --noEmit",
+      "TEST_RUNNER": "Vitest",
+      "INSTALL_CMD": "pnpm install",
+      "DEV_CMD": "pnpm dev",
+      "TEST_CMD": "pnpm test:run",
+      "LINT_CMD": "pnpm lint",
+      "FORMAT_CHECK_CMD": "pnpm format --check",
+      "TYPECHECK_CMD": "pnpm typecheck",
+      "BUILD_CMD": "pnpm build",
+      "AUDIT_CMD": "pnpm audit --prod",
+      "TEST_CLASSES": "unit|integration|all"
+    },
+    {
+      "CODE_AREA": "services/pipeline/",
+      "CODE_AREA_NAME": "the Python pipeline sidecar",
+      "CODE_AREA_BASENAME": "pipeline",
+      "RUNTIME": "Python 3.13",
+      "PKG_MANAGER": "uv",
+      "FRAMEWORK": "FastAPI + LangGraph",
+      "VALIDATION_LIB": "Pydantic v2",
+      "LINT": "ruff",
+      "TYPECHECKER": "mypy --strict",
+      "TEST_RUNNER": "pytest",
+      "INSTALL_CMD": "uv sync",
+      "DEV_CMD": "uv run uvicorn pipeline.main:app --reload",
+      "TEST_CMD": "uv run pytest",
+      "LINT_CMD": "uv run ruff check .",
+      "FORMAT_CHECK_CMD": "uv run ruff format --check .",
+      "TYPECHECK_CMD": "uv run mypy services/pipeline",
+      "BUILD_CMD": null,
+      "AUDIT_CMD": "uv run pip-audit",
+      "TEST_CLASSES": "unit|integration|all"
+    },
+    {
+      "CODE_AREA": "workers/export/",
+      "CODE_AREA_NAME": "the Sims DBPF export worker",
+      "CODE_AREA_BASENAME": "export",
+      "RUNTIME": "Node 22 LTS",
+      "PKG_MANAGER": "pnpm",
+      "FRAMEWORK": "@s4tk (DBPF)",
+      "VALIDATION_LIB": "Zod",
+      "LINT": "ESLint",
+      "TYPECHECKER": "tsc --noEmit",
+      "TEST_RUNNER": "Vitest",
+      "INSTALL_CMD": "pnpm install",
+      "DEV_CMD": null,
+      "TEST_CMD": "pnpm test:run",
+      "LINT_CMD": "pnpm lint",
+      "FORMAT_CHECK_CMD": "pnpm format --check",
+      "TYPECHECK_CMD": "pnpm typecheck",
+      "BUILD_CMD": "pnpm build",
+      "AUDIT_CMD": "pnpm audit --prod",
+      "TEST_CLASSES": "unit|integration|all"
+    },
+    {
+      "CODE_AREA": "workers/blender/",
+      "CODE_AREA_NAME": "the Blender mesh/GEOM worker (bpy)",
+      "CODE_AREA_BASENAME": "blender",
+      "RUNTIME": "Blender 5.1 bundled Python 3.13 (bpy==5.1.2)",
+      "PKG_MANAGER": "uv",
+      "FRAMEWORK": "Blender bpy",
+      "VALIDATION_LIB": "Pydantic v2",
+      "LINT": "ruff",
+      "TYPECHECKER": "mypy",
+      "TEST_RUNNER": "pytest+blender",
+      "INSTALL_CMD": "uv sync",
+      "DEV_CMD": null,
+      "TEST_CMD": "uv run pytest",
+      "LINT_CMD": "uv run ruff check .",
+      "FORMAT_CHECK_CMD": "uv run ruff format --check .",
+      "TYPECHECK_CMD": "uv run mypy workers/blender",
+      "BUILD_CMD": null,
+      "AUDIT_CMD": "uv run pip-audit",
+      "TEST_CLASSES": "unit|integration|all"
+    },
+    {
+      "CODE_AREA": "packages/contracts/",
+      "CODE_AREA_NAME": "the shared contracts package",
+      "CODE_AREA_BASENAME": "contracts",
+      "RUNTIME": "Python 3.13 (+ TS codegen)",
+      "PKG_MANAGER": "uv",
+      "FRAMEWORK": "Pydantic v2 -> JSON-Schema -> TS codegen",
+      "VALIDATION_LIB": "Pydantic v2",
+      "LINT": "ruff",
+      "TYPECHECKER": "mypy --strict",
+      "TEST_RUNNER": "pytest",
+      "INSTALL_CMD": "uv sync",
+      "DEV_CMD": null,
+      "TEST_CMD": "uv run pytest",
+      "LINT_CMD": "uv run ruff check .",
+      "FORMAT_CHECK_CMD": "uv run ruff format --check .",
+      "TYPECHECK_CMD": "uv run mypy packages/contracts",
+      "BUILD_CMD": "uv run python -m contracts.codegen",
+      "AUDIT_CMD": "uv run pip-audit",
+      "TEST_CLASSES": "unit|snapshot|all"
+    },
+    {
+      "CODE_AREA": "evals/",
+      "CODE_AREA_NAME": "the eval harnesses",
+      "CODE_AREA_BASENAME": "evals",
+      "RUNTIME": "Python 3.13",
+      "PKG_MANAGER": "uv",
+      "FRAMEWORK": "LangSmith SDK + trimesh/Open3D/torchmetrics + syrupy",
+      "VALIDATION_LIB": "Pydantic v2",
+      "LINT": "ruff",
+      "TYPECHECKER": "mypy",
+      "TEST_RUNNER": "pytest",
+      "INSTALL_CMD": "uv sync",
+      "DEV_CMD": null,
+      "TEST_CMD": "uv run pytest",
+      "LINT_CMD": "uv run ruff check .",
+      "FORMAT_CHECK_CMD": "uv run ruff format --check .",
+      "TYPECHECK_CMD": "uv run mypy evals",
+      "BUILD_CMD": null,
+      "AUDIT_CMD": "uv run pip-audit",
+      "TEST_CLASSES": "unit|eval|all"
+    }
+  ],
+  "productionGates": {
+    "gitleaksSecretsHook": true,
+    "dependencyAuditRow": true,
+    "wholeSystemSecurityRow": true,
+    "perfBudgetRow": false
+  },
+  "generatedFiles": [
+    {
+      "dest": "CLAUDE.md",
+      "template": "templates/CLAUDE.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": "apps/desktop/CLAUDE.md",
+      "template": "templates/area-CLAUDE.md",
+      "kind": "mixed",
+      "area": "apps/desktop/"
+    },
+    {
+      "dest": "apps/desktop/LESSONS.md",
+      "template": "templates/area-LESSONS.md",
+      "kind": "accreted",
+      "area": "apps/desktop/"
+    },
+    {
+      "dest": "services/pipeline/CLAUDE.md",
+      "template": "templates/area-CLAUDE.md",
+      "kind": "mixed",
+      "area": "services/pipeline/"
+    },
+    {
+      "dest": "services/pipeline/LESSONS.md",
+      "template": "templates/area-LESSONS.md",
+      "kind": "accreted",
+      "area": "services/pipeline/"
+    },
+    {
+      "dest": "workers/export/CLAUDE.md",
+      "template": "templates/area-CLAUDE.md",
+      "kind": "mixed",
+      "area": "workers/export/"
+    },
+    {
+      "dest": "workers/export/LESSONS.md",
+      "template": "templates/area-LESSONS.md",
+      "kind": "accreted",
+      "area": "workers/export/"
+    },
+    {
+      "dest": "workers/blender/CLAUDE.md",
+      "template": "templates/area-CLAUDE.md",
+      "kind": "mixed",
+      "area": "workers/blender/"
+    },
+    {
+      "dest": "workers/blender/LESSONS.md",
+      "template": "templates/area-LESSONS.md",
+      "kind": "accreted",
+      "area": "workers/blender/"
+    },
+    {
+      "dest": "packages/contracts/CLAUDE.md",
+      "template": "templates/area-CLAUDE.md",
+      "kind": "mixed",
+      "area": "packages/contracts/"
+    },
+    {
+      "dest": "packages/contracts/LESSONS.md",
+      "template": "templates/area-LESSONS.md",
+      "kind": "accreted",
+      "area": "packages/contracts/"
+    },
+    {
+      "dest": "evals/CLAUDE.md",
+      "template": "templates/area-CLAUDE.md",
+      "kind": "mixed",
+      "area": "evals/"
+    },
+    {
+      "dest": "evals/LESSONS.md",
+      "template": "templates/area-LESSONS.md",
+      "kind": "accreted",
+      "area": "evals/"
+    },
+    {
+      "dest": "docs/orchestrator-briefing.md",
+      "template": "templates/docs/orchestrator-briefing.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": "docs/tdd-brief-template.md",
+      "template": "templates/docs/tdd-brief-template.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": "docs/team-protocol.md",
+      "template": "templates/docs/team-protocol.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": "docs/scaffolding-reference.md",
+      "template": "templates/docs/scaffolding-reference.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": ".claude/commands/check-arch.md",
+      "template": "templates/.claude/commands/check-arch.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/context-check.md",
+      "template": "templates/.claude/commands/context-check.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/eval.md",
+      "template": "templates/.claude/commands/eval.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": ".claude/commands/orchestrate-end.md",
+      "template": "templates/.claude/commands/orchestrate-end.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/orchestrate-start.md",
+      "template": "templates/.claude/commands/orchestrate-start.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/phase-exit.md",
+      "template": "templates/.claude/commands/phase-exit.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/preflight.md",
+      "template": "templates/.claude/commands/preflight.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/run-tests.md",
+      "template": "templates/.claude/commands/run-tests.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": ".claude/commands/session-end.md",
+      "template": "templates/.claude/commands/session-end.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/session-start.md",
+      "template": "templates/.claude/commands/session-start.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/tdd.md",
+      "template": "templates/.claude/commands/tdd.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/team-end.md",
+      "template": "templates/.claude/commands/team-end.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/team-start.md",
+      "template": "templates/.claude/commands/team-start.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/commands/trace.md",
+      "template": "templates/.claude/commands/trace.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": ".claude/commands/wired.md",
+      "template": "templates/.claude/commands/wired.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/agents/README.md",
+      "template": "templates/.claude/agents/README.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": ".claude/agents/code-quality-reviewer.md",
+      "template": "templates/.claude/agents/code-quality-reviewer.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/agents/security-reviewer.md",
+      "template": "templates/.claude/agents/security-reviewer.md",
+      "kind": "mixed"
+    },
+    {
+      "dest": ".claude/agents/reachability-auditor.md",
+      "template": "templates/.claude/agents/reachability-auditor.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/agents/arch-drift-auditor.md",
+      "template": "templates/.claude/agents/arch-drift-auditor.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": ".claude/agents/brief-drafter.md",
+      "template": "templates/.claude/agents/brief-drafter.md",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": "scripts/spec-lint.sh",
+      "template": "templates/scripts/spec-lint.sh",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": "scripts/guards/git-guard.sh",
+      "template": "templates/scripts/guards/git-guard.sh",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": "scripts/guards/territory-guard.sh",
+      "template": "templates/scripts/guards/territory-guard.sh",
+      "kind": "placeholder-only"
+    },
+    {
+      "dest": "scripts/guards/secrets-guard.sh",
+      "template": "templates/scripts/guards/secrets-guard.sh",
+      "kind": "verbatim"
+    },
+    {
+      "dest": ".gitleaksignore",
+      "template": "templates/.gitleaksignore",
+      "kind": "accreted"
+    },
+    {
+      "dest": ".claude/settings.json",
+      "template": "templates/.claude/settings.json",
+      "kind": "verbatim"
+    },
+    {
+      "dest": "IMPLEMENTATION_PLAN.md",
+      "template": "templates/IMPLEMENTATION_PLAN.md",
+      "kind": "accreted"
+    },
+    {
+      "dest": "ARCHITECTURE.md",
+      "template": "templates/ARCHITECTURE.md",
+      "kind": "user-canonical"
+    },
+    {
+      "dest": ".scaffolding/README.md",
+      "template": "templates/.scaffolding/README.md",
+      "kind": "verbatim"
+    }
+  ],
+  "exampleBlocks": [
+    {
+      "file": "CLAUDE.md",
+      "id": "project-structure",
+      "status": "customized"
+    },
+    {
+      "file": "CLAUDE.md",
+      "id": "tech-stack",
+      "status": "customized"
+    },
+    {
+      "file": "CLAUDE.md",
+      "id": "strict-typing-posture",
+      "status": "customized"
+    },
+    {
+      "file": "CLAUDE.md",
+      "id": "tdd-scope",
+      "status": "customized"
+    },
+    {
+      "file": "CLAUDE.md",
+      "id": "key-safety-rules",
+      "status": "customized"
+    },
+    {
+      "file": "docs/orchestrator-briefing.md",
+      "id": "who-the-user-is",
+      "status": "customized"
+    },
+    {
+      "file": "docs/orchestrator-briefing.md",
+      "id": "project-context",
+      "status": "customized"
+    },
+    {
+      "file": "docs/orchestrator-briefing.md",
+      "id": "project-conventions",
+      "status": "customized"
+    },
+    {
+      "file": "docs/tdd-brief-template.md",
+      "id": "tdd-brief-worked-example",
+      "status": "illustrative"
+    },
+    {
+      "file": "docs/tdd-brief-template.md",
+      "id": "project-specific-pitfalls",
+      "status": "illustrative"
+    },
+    {
+      "file": "docs/team-protocol.md",
+      "id": "code-areas",
+      "status": "customized"
+    },
+    {
+      "file": "docs/scaffolding-reference.md",
+      "id": "inventory-extension",
+      "status": "customized"
+    },
+    {
+      "file": "docs/scaffolding-reference.md",
+      "id": "instance-conventions",
+      "status": "customized"
+    },
+    {
+      "file": ".claude/agents/README.md",
+      "id": "starter-subagent-inventory",
+      "status": "customized"
+    },
+    {
+      "file": ".claude/agents/security-reviewer.md",
+      "id": "safety-invariant-cross-checks",
+      "status": "customized"
+    },
+    {
+      "file": ".claude/commands/run-tests.md",
+      "id": "test-class-discipline-notes",
+      "status": "illustrative"
+    },
+    {
+      "file": ".claude/commands/eval.md",
+      "id": "eval-body",
+      "status": "customized"
+    },
+    {
+      "file": ".claude/commands/trace.md",
+      "id": "trace-body",
+      "status": "customized"
+    },
+    {
+      "file": "IMPLEMENTATION_PLAN.md",
+      "id": "deliverable-map",
+      "status": "customized"
+    },
+    {
+      "file": "IMPLEMENTATION_PLAN.md",
+      "id": "parallelization-plan",
+      "status": "customized"
+    },
+    {
+      "file": "IMPLEMENTATION_PLAN.md",
+      "id": "task-entry-format",
+      "status": "customized"
+    },
+    {
+      "file": "apps/desktop/CLAUDE.md",
+      "id": "area-stack",
+      "status": "customized"
+    },
+    {
+      "file": "apps/desktop/CLAUDE.md",
+      "id": "forbidden-patterns",
+      "status": "customized"
+    },
+    {
+      "file": "apps/desktop/CLAUDE.md",
+      "id": "module-layout",
+      "status": "customized"
+    },
+    {
+      "file": "apps/desktop/CLAUDE.md",
+      "id": "area-subagent-candidates",
+      "status": "illustrative"
+    },
+    {
+      "file": "services/pipeline/CLAUDE.md",
+      "id": "area-stack",
+      "status": "customized"
+    },
+    {
+      "file": "services/pipeline/CLAUDE.md",
+      "id": "forbidden-patterns",
+      "status": "customized"
+    },
+    {
+      "file": "services/pipeline/CLAUDE.md",
+      "id": "module-layout",
+      "status": "customized"
+    },
+    {
+      "file": "services/pipeline/CLAUDE.md",
+      "id": "area-subagent-candidates",
+      "status": "illustrative"
+    },
+    {
+      "file": "workers/export/CLAUDE.md",
+      "id": "area-stack",
+      "status": "customized"
+    },
+    {
+      "file": "workers/export/CLAUDE.md",
+      "id": "forbidden-patterns",
+      "status": "customized"
+    },
+    {
+      "file": "workers/export/CLAUDE.md",
+      "id": "module-layout",
+      "status": "customized"
+    },
+    {
+      "file": "workers/export/CLAUDE.md",
+      "id": "area-subagent-candidates",
+      "status": "illustrative"
+    },
+    {
+      "file": "workers/blender/CLAUDE.md",
+      "id": "area-stack",
+      "status": "customized"
+    },
+    {
+      "file": "workers/blender/CLAUDE.md",
+      "id": "forbidden-patterns",
+      "status": "customized"
+    },
+    {
+      "file": "workers/blender/CLAUDE.md",
+      "id": "module-layout",
+      "status": "customized"
+    },
+    {
+      "file": "workers/blender/CLAUDE.md",
+      "id": "area-subagent-candidates",
+      "status": "illustrative"
+    },
+    {
+      "file": "packages/contracts/CLAUDE.md",
+      "id": "area-stack",
+      "status": "customized"
+    },
+    {
+      "file": "packages/contracts/CLAUDE.md",
+      "id": "forbidden-patterns",
+      "status": "customized"
+    },
+    {
+      "file": "packages/contracts/CLAUDE.md",
+      "id": "module-layout",
+      "status": "customized"
+    },
+    {
+      "file": "packages/contracts/CLAUDE.md",
+      "id": "area-subagent-candidates",
+      "status": "illustrative"
+    },
+    {
+      "file": "evals/CLAUDE.md",
+      "id": "area-stack",
+      "status": "customized"
+    },
+    {
+      "file": "evals/CLAUDE.md",
+      "id": "forbidden-patterns",
+      "status": "customized"
+    },
+    {
+      "file": "evals/CLAUDE.md",
+      "id": "module-layout",
+      "status": "customized"
+    },
+    {
+      "file": "evals/CLAUDE.md",
+      "id": "area-subagent-candidates",
+      "status": "illustrative"
+    }
+  ]
+}

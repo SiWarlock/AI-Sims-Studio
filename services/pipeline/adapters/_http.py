@@ -11,7 +11,9 @@ host, never the response body).
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import ipaddress
+import socket
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -101,19 +103,105 @@ def post_json(
     return request_json(client, "POST", url, headers=headers, host=host, json_body=json_body)
 
 
+def _default_resolver(host: str) -> list[str]:
+    """Resolve ``host`` to its IP strings via the OS (the default SSRF resolver; tests inject)."""
+    return [str(info[4][0]) for info in socket.getaddrinfo(host, None)]
+
+
+def _check_ssrf(
+    url: str, *, allowed_hosts: set[str] | None, resolver: Callable[[str], list[str]]
+) -> str:
+    """SSRF guard (§16): https-only; optional allowlist gate; and the ALWAYS-ON floor — reject a
+    host resolving to a private / loopback / link-local / reserved / multicast address (the
+    metadata-endpoint class). Returns the validated host; raises VALIDATION_FAILED on reject."""
+    parsed = httpx.URL(url)
+    if parsed.scheme != "https":
+        raise ProviderError(
+            build_envelope(
+                ErrorCode.VALIDATION_FAILED,
+                maintainer_detail=f"non-https url scheme '{parsed.scheme}'",
+            )
+        )
+    host = parsed.host
+    if not host:
+        raise ProviderError(
+            build_envelope(ErrorCode.VALIDATION_FAILED, maintainer_detail="url has no host")
+        )
+    # NOTE (TOCTOU): httpx re-resolves the host at connect time, so a DNS-rebinding attacker could
+    # pass this guard then connect to a private IP. Robust fix = pin the validated IP at the
+    # transport — deferred to 3.4b. allowed_hosts is a name-level gate, NOT an IP guarantee; the
+    # always-on private-IP floor below is the load-bearing boundary.
+    if allowed_hosts is not None and host not in allowed_hosts:
+        raise ProviderError(
+            build_envelope(
+                ErrorCode.VALIDATION_FAILED, maintainer_detail=f"host '{host}' not in allowed_hosts"
+            )
+        )
+    # ALWAYS-ON floor: resolve + reject anything not globally routable (private/loopback/link-local/
+    # reserved/multicast/CGNAT/unspecified — the metadata-endpoint class). `not is_global` is one
+    # check that subsumes them all. A resolution failure / empty result fails CLOSED (can't verify
+    # the host is safe) → VALIDATION_FAILED, never a silent pass or a retryable timeout.
+    try:
+        addresses = resolver(host)
+    except OSError as exc:
+        raise ProviderError(
+            build_envelope(
+                ErrorCode.VALIDATION_FAILED, maintainer_detail=f"could not resolve host '{host}'"
+            )
+        ) from exc
+    if not addresses:
+        raise ProviderError(
+            build_envelope(
+                ErrorCode.VALIDATION_FAILED,
+                maintainer_detail=f"no addresses resolved for host '{host}'",
+            )
+        )
+    for raw in addresses:
+        if not ipaddress.ip_address(raw).is_global:
+            raise ProviderError(
+                build_envelope(
+                    ErrorCode.VALIDATION_FAILED,
+                    maintainer_detail=f"host '{host}' resolves to a non-public address",
+                )
+            )
+    return host
+
+
 def get_bytes(
     client: httpx.Client,
     url: str,
     *,
-    host: str,
+    max_bytes: int,
     headers: dict[str, str] | None = None,
+    allowed_hosts: set[str] | None = None,
+    resolver: Callable[[str], list[str]] | None = None,
 ) -> bytes:
-    """GET raw bytes (artifact download). Transport error → PROVIDER_TIMEOUT; ``>= 400`` →
-    the §17-classified ProviderError. The §16 byte-cap / magic-byte hardening lands in 3.4."""
+    """GET raw bytes (artifact download), §16-hardened. Pre-flight SSRF guard (https-only,
+    private-IP rejection, optional allowlist), then a STREAMING read that raises
+    ``MALFORMED_OUTPUT`` the moment the body exceeds ``max_bytes`` — it never buffers the whole body
+    (DoS guard). ``follow_redirects=False``; a 3xx is rejected (redirect-pivot guard), ``>= 400`` →
+    the §17-classified ProviderError, transport error → PROVIDER_TIMEOUT."""
+    host = _check_ssrf(url, allowed_hosts=allowed_hosts, resolver=resolver or _default_resolver)
     try:
-        response = client.get(url, headers=headers or {})
+        with client.stream("GET", url, headers=headers or {}, follow_redirects=False) as response:
+            if 300 <= response.status_code < 400:
+                raise ProviderError(
+                    build_envelope(
+                        ErrorCode.VALIDATION_FAILED,
+                        maintainer_detail=f"unexpected redirect {response.status_code} from {host}",
+                    )
+                )
+            _raise_for_status(response, host)
+            buffer = bytearray()
+            for chunk in response.iter_bytes():
+                buffer += chunk
+                if len(buffer) > max_bytes:
+                    raise ProviderError(
+                        build_envelope(
+                            ErrorCode.MALFORMED_OUTPUT,
+                            maintainer_detail=f"download exceeds max_bytes {max_bytes} from {host}",
+                        )
+                    )
+            return bytes(buffer)
     except httpx.TransportError as exc:
         raise _transport_error(exc, host) from exc
-
-    _raise_for_status(response, host)
-    return response.content

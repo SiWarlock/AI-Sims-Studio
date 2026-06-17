@@ -16,6 +16,7 @@ import pytest
 from aisims_contracts.error import ErrorCode, ErrorEnvelope
 from aisims_contracts.providers import ImageGenProvider, PollStatus, ProviderJobRef
 
+from adapters.validation import DEFAULT_MAX_CANDIDATES, DEFAULT_MAX_IMAGE_BYTES
 from obs.secrets import InMemorySecretsAccessor, SecretsAccessor
 
 from .conftest import CASSETTE_DIR, SpyAccessor
@@ -29,17 +30,34 @@ _EXPECTED_CASSETTES = {
     "wavespeed_submit_401",
     "wavespeed_fetch",
     "wavespeed_fetch_error",
+    "wavespeed_fetch_wrongmagic",
     "wavespeed_poll_unknown",
 }
 
 
-def _provider(scratch: Path, secrets: SecretsAccessor | None = None) -> ImageGenProvider:
+def _public_resolver(_host: str) -> list[str]:
+    """Map any host → a public test IP so the §16 SSRF guard passes WITHOUT real DNS (the resolver
+    is injected per the Q2 condition — we do NOT couple the test to a production allowed_hosts)."""
+    return ["93.184.216.34"]
+
+
+def _provider(
+    scratch: Path,
+    secrets: SecretsAccessor | None = None,
+    *,
+    max_bytes: int = DEFAULT_MAX_IMAGE_BYTES,
+    max_candidates: int = DEFAULT_MAX_CANDIDATES,
+) -> ImageGenProvider:
     from adapters.imagegen import WaveSpeedImageGenProvider
 
-    # default model = the real WaveSpeed FLUX.2 [pro] path (matches the cassette endpoints)
+    # default model = the real WaveSpeed FLUX.2 [pro] path (matches the cassette endpoints).
+    # inject the resolver (public IP) so the always-on private-IP SSRF floor passes without DNS.
     return WaveSpeedImageGenProvider(
         secrets=secrets or InMemorySecretsAccessor({"WAVESPEED_API_KEY": "sk-ws-test-PLACEHOLDER"}),
         scratch_dir=scratch,
+        resolver=_public_resolver,
+        max_bytes=max_bytes,
+        max_candidates=max_candidates,
     )
 
 
@@ -183,6 +201,38 @@ def test_fetch_writes_scratch_guarded(imagegen_cassette: Cassette, tmp_path: Pat
 
     guarded = safe_scratch_path(tmp_path, "https://x/../../../etc/passwd", index=0)
     assert tmp_path.resolve() in guarded.resolve().parents
+
+
+def test_fetch_rejects_oversized(imagegen_cassette: Cassette, tmp_path: Path) -> None:
+    """spec(§16) — a download exceeding the adapter's max_bytes raises ProviderError (wired through
+    get_bytes' streaming cap). Reuses the happy cassette body with a tiny cap."""
+    from adapters.errors import ProviderError
+
+    provider = _provider(tmp_path, max_bytes=16)
+    with imagegen_cassette("wavespeed_fetch"), pytest.raises(ProviderError) as exc:
+        provider.fetch(["https://cdn.wavespeed.ai/out/concept.png"])
+    assert exc.value.envelope.code is ErrorCode.MALFORMED_OUTPUT
+
+
+def test_fetch_rejects_wrong_magic(imagegen_cassette: Cassette, tmp_path: Path) -> None:
+    """spec(§16) — a downloaded body that isn't an allowed image kind (an HTML error page) →
+    ProviderError(MALFORMED_OUTPUT), wired through validate_content."""
+    from adapters.errors import ProviderError
+
+    provider = _provider(tmp_path)
+    with imagegen_cassette("wavespeed_fetch_wrongmagic"), pytest.raises(ProviderError) as exc:
+        provider.fetch(["https://cdn.wavespeed.ai/out/notimage.png"])
+    assert exc.value.envelope.code is ErrorCode.MALFORMED_OUTPUT
+
+
+def test_fetch_rejects_too_many_candidates(tmp_path: Path) -> None:
+    """spec(§16) — more than max_candidates urls is rejected BEFORE any download (no cassette)."""
+    from adapters.errors import ProviderError
+
+    provider = _provider(tmp_path, max_candidates=2)
+    with pytest.raises(ProviderError) as exc:
+        provider.fetch([f"https://cdn.wavespeed.ai/out/{i}.png" for i in range(5)])
+    assert exc.value.envelope.code is ErrorCode.VALIDATION_FAILED
 
 
 def test_key_via_accessor_not_persisted(imagegen_cassette: Cassette, tmp_path: Path) -> None:

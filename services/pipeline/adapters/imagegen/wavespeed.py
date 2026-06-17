@@ -10,6 +10,7 @@ as FAILED and never raises). Keys via the ``SecretsAccessor`` at call time only 
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,13 @@ from aisims_contracts.providers import PollResult, PollStatus, ProviderJobRef, P
 
 from adapters._http import get_bytes, open_client, request_json
 from adapters.errors import ProviderError, build_envelope
+from adapters.validation import (
+    DEFAULT_MAX_CANDIDATES,
+    DEFAULT_MAX_IMAGE_BYTES,
+    ContentKind,
+    enforce_candidate_count,
+    validate_content,
+)
 from obs.secrets import SecretsAccessor
 
 from ._base import safe_scratch_path
@@ -28,6 +36,8 @@ DEFAULT_BASE_URL = "https://api.wavespeed.ai/api/v3"
 DEFAULT_MODEL = "wavespeed-ai/flux-2-pro/text-to-image"
 DEFAULT_KEY_NAME = "WAVESPEED_API_KEY"
 DEFAULT_TIMEOUT = 60.0
+# concept-image content kinds the §16 gate accepts for this adapter (mesh kinds are 3.1).
+_IMAGE_KINDS = {ContentKind.PNG, ContentKind.JPEG, ContentKind.WEBP}
 
 # WaveSpeed data.status → our §7 PollStatus, for the pending states (created/processing).
 _PENDING_STATUS = {"created": PollStatus.SUBMITTED, "processing": PollStatus.RUNNING}
@@ -66,6 +76,10 @@ class WaveSpeedImageGenProvider:
         base_url: str = DEFAULT_BASE_URL,
         timeout: float = DEFAULT_TIMEOUT,
         http_client: httpx.Client | None = None,
+        max_bytes: int = DEFAULT_MAX_IMAGE_BYTES,
+        max_candidates: int = DEFAULT_MAX_CANDIDATES,
+        allowed_hosts: set[str] | None = None,
+        resolver: Callable[[str], list[str]] | None = None,
     ) -> None:
         self._secrets = secrets  # accessor reference only — NEVER the resolved key (rule 5)
         self._model = model
@@ -75,6 +89,12 @@ class WaveSpeedImageGenProvider:
         self._host = httpx.URL(base_url).host
         self._timeout = timeout
         self._client = http_client
+        # §16 fetch caps + SSRF: allowed_hosts defaults None so private-IP rejection ALWAYS runs;
+        # resolver is injectable (tests map the CDN host → a public IP to skip real DNS).
+        self._max_bytes = max_bytes
+        self._max_candidates = max_candidates
+        self._allowed_hosts = allowed_hosts
+        self._resolver = resolver
 
     def _key(self) -> str:
         key = self._secrets.get(self._key_name)
@@ -151,13 +171,22 @@ class WaveSpeedImageGenProvider:
         return PollResult(status=mapped, progress=_PENDING_PROGRESS[mapped], usage=usage)
 
     def fetch(self, urls: list[str]) -> list[str]:
+        # §16 trust boundary: cap the fanout BEFORE any download, then for each output CDN url
+        # SSRF+size-guard the (unauthenticated) download and magic-byte-validate the bytes before
+        # they touch scratch. Every violation RAISES (fetch has no result error field — LESSONS 10).
+        enforce_candidate_count(urls, max_candidates=self._max_candidates)
         self._scratch_dir.mkdir(parents=True, exist_ok=True)
         paths: list[str] = []
         with open_client(self._client, self._timeout) as client:
             for index, url in enumerate(urls):
-                # the output CDN urls are downloaded unauthenticated; host from the url for the
-                # bounded error detail (not the api host).
-                content = get_bytes(client, url, host=httpx.URL(url).host)
+                content = get_bytes(
+                    client,
+                    url,
+                    max_bytes=self._max_bytes,
+                    allowed_hosts=self._allowed_hosts,
+                    resolver=self._resolver,
+                )
+                validate_content(content, allowed=_IMAGE_KINDS)
                 dest = safe_scratch_path(self._scratch_dir, url, index=index)
                 dest.write_bytes(content)
                 paths.append(str(dest))

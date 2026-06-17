@@ -3,14 +3,14 @@ interactions:
     body: null
     headers: {}
     method: GET
-    uri: https://cdn.wavespeed.ai/out/concept.png
+    uri: https://cdn.wavespeed.ai/out/notimage.png
   response:
     status:
       code: 200
       message: OK
     headers:
       content-type:
-      - image/png
+      - text/html
     body:
-      string: RIFF____WEBPsynthetic-concept-image-bytes
+      string: '<html><body>upstream error - not an image</body></html>'
 version: 1

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Strict baseline CSP. connect-src is loopback-wide for now; 7.2 pins it to the negotiated
+         sidecar port once the handshake lands. Header-level CSP (onHeadersReceived) is a 7.2 add. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:*; base-uri 'none'; object-src 'none'; frame-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Sims Creator</title>
+  </head>
+  <body>
+    <!-- Static placeholder renderer (Phase-7.1). The real screens (React + Vite) land in 7.3. -->
+    <main id="app">
+      <h1>AI Sims Creator</h1>
+      <p>Thin observer initializing…</p>
+    </main>
+    <!-- The renderer entry wires the IPC client + SSE observer + projection (bootstrapObserver).
+         The TS→JS build step (Vite) is wired in 7.3; the source path is src/renderer-entry.ts. -->
+    <script type="module" src="./renderer-entry.js"></script>
+  </body>
+</html>

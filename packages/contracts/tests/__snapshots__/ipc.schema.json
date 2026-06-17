@@ -1,0 +1,1033 @@
+{
+  "contractVersion": "1.0",
+  "endpointErrorCodes": {
+    "DELETE /jobs/{id}": [
+      "SYSTEM"
+    ],
+    "GET /projects": [
+      "SYSTEM"
+    ],
+    "GET/PUT /settings": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /items/{id}/functional": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /items/{id}/include": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /items/{id}/regenerate": [
+      "ARTIFACT_EXPIRED",
+      "MALFORMED_OUTPUT",
+      "MESH_QA_FAILED",
+      "PROVIDER_AUTH_QUOTA",
+      "PROVIDER_OUTAGE",
+      "PROVIDER_RATE_LIMIT",
+      "PROVIDER_TIMEOUT",
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /projects": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /projects/{id}/export": [
+      "DBPF_WRITE_FAILED",
+      "DISK_FULL",
+      "GEOM_EXPORT_FAILED",
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /projects/{id}/runs": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /projects/{id}/test-install": [
+      "DISK_FULL",
+      "SYSTEM",
+      "TEST_INSTALL_FAILED"
+    ],
+    "POST /projects/{id}/validate": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /runs/{id}/gate": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ],
+    "POST /settings/providers/{p}/test": [
+      "PROVIDER_AUTH_QUOTA",
+      "PROVIDER_OUTAGE",
+      "PROVIDER_RATE_LIMIT",
+      "PROVIDER_TIMEOUT",
+      "SYSTEM"
+    ],
+    "POST /steps/{id}/rerun": [
+      "SYSTEM",
+      "VALIDATION_FAILED"
+    ]
+  },
+  "headers": {
+    "idempotencyKey": "Idempotency-Key",
+    "token": "X-AISims-Token"
+  },
+  "health": {
+    "additionalProperties": false,
+    "description": "GET /health response (\u00a74/\u00a76) \u2014 carries the negotiated contractVersion.",
+    "properties": {
+      "contractVersion": {
+        "title": "Contractversion",
+        "type": "string"
+      },
+      "status": {
+        "const": "ok",
+        "default": "ok",
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "contractVersion"
+    ],
+    "title": "HealthResponse",
+    "type": "object"
+  },
+  "mutatingEndpoints": [
+    "DELETE /jobs/{id}",
+    "GET/PUT /settings",
+    "POST /items/{id}/functional",
+    "POST /items/{id}/include",
+    "POST /items/{id}/regenerate",
+    "POST /projects",
+    "POST /projects/{id}/export",
+    "POST /projects/{id}/runs",
+    "POST /projects/{id}/test-install",
+    "POST /projects/{id}/validate",
+    "POST /runs/{id}/gate",
+    "POST /settings/providers/{p}/test",
+    "POST /steps/{id}/rerun"
+  ],
+  "readOnlyEndpoints": [
+    "GET /projects"
+  ],
+  "requestHeaders": {
+    "additionalProperties": false,
+    "description": "Per-request wire headers (\u00a74/\u00a716): ``token`` on every request, ``idempotencyKey`` on\nmutating commands (the header names are TOKEN_HEADER / IDEMPOTENCY_KEY_HEADER).",
+    "properties": {
+      "idempotencyKey": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Idempotencykey"
+      },
+      "token": {
+        "title": "Token",
+        "type": "string"
+      }
+    },
+    "required": [
+      "token"
+    ],
+    "title": "IpcRequestHeaders",
+    "type": "object"
+  },
+  "requestModels": {
+    "DELETE /jobs/{id}": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "CancelJobRequest",
+      "type": "object"
+    },
+    "GET /projects": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Limit"
+        },
+        "offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offset"
+        }
+      },
+      "title": "ListProjectsRequest",
+      "type": "object"
+    },
+    "GET/PUT /settings": {
+      "additionalProperties": false,
+      "properties": {
+        "simsModsPath": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simsmodspath"
+        },
+        "telemetryEnabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Telemetryenabled"
+        }
+      },
+      "title": "UpdateSettingsRequest",
+      "type": "object"
+    },
+    "POST /items/{id}/functional": {
+      "additionalProperties": false,
+      "properties": {
+        "archetype": {
+          "title": "Archetype",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "archetype"
+      ],
+      "title": "FunctionalRequest",
+      "type": "object"
+    },
+    "POST /items/{id}/include": {
+      "additionalProperties": false,
+      "properties": {
+        "included": {
+          "title": "Included",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "included"
+      ],
+      "title": "IncludeItemRequest",
+      "type": "object"
+    },
+    "POST /items/{id}/regenerate": {
+      "$defs": {
+        "RegenCleanupRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "target": {
+              "const": "cleanup",
+              "default": "cleanup",
+              "title": "Target",
+              "type": "string"
+            }
+          },
+          "title": "RegenCleanupRequest",
+          "type": "object"
+        },
+        "RegenConceptRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "target": {
+              "const": "concept",
+              "default": "concept",
+              "title": "Target",
+              "type": "string"
+            }
+          },
+          "title": "RegenConceptRequest",
+          "type": "object"
+        },
+        "RegenMeshRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "target": {
+              "const": "mesh",
+              "default": "mesh",
+              "title": "Target",
+              "type": "string"
+            }
+          },
+          "title": "RegenMeshRequest",
+          "type": "object"
+        }
+      },
+      "discriminator": {
+        "mapping": {
+          "cleanup": "#/$defs/RegenCleanupRequest",
+          "concept": "#/$defs/RegenConceptRequest",
+          "mesh": "#/$defs/RegenMeshRequest"
+        },
+        "propertyName": "target"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/RegenConceptRequest"
+        },
+        {
+          "$ref": "#/$defs/RegenMeshRequest"
+        },
+        {
+          "$ref": "#/$defs/RegenCleanupRequest"
+        }
+      ]
+    },
+    "POST /projects": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "CreateProjectRequest",
+      "type": "object"
+    },
+    "POST /projects/{id}/export": {
+      "additionalProperties": false,
+      "properties": {
+        "itemIds": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Itemids"
+        }
+      },
+      "title": "ExportRequest",
+      "type": "object"
+    },
+    "POST /projects/{id}/runs": {
+      "$defs": {
+        "ResumeRunRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "resume",
+              "default": "resume",
+              "title": "Action",
+              "type": "string"
+            },
+            "fromStepId": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Fromstepid"
+            }
+          },
+          "title": "ResumeRunRequest",
+          "type": "object"
+        },
+        "StartRunRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "start",
+              "default": "start",
+              "title": "Action",
+              "type": "string"
+            }
+          },
+          "title": "StartRunRequest",
+          "type": "object"
+        }
+      },
+      "discriminator": {
+        "mapping": {
+          "resume": "#/$defs/ResumeRunRequest",
+          "start": "#/$defs/StartRunRequest"
+        },
+        "propertyName": "action"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/StartRunRequest"
+        },
+        {
+          "$ref": "#/$defs/ResumeRunRequest"
+        }
+      ]
+    },
+    "POST /projects/{id}/test-install": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "TestInstallRequest",
+      "type": "object"
+    },
+    "POST /projects/{id}/validate": {
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        }
+      },
+      "title": "ValidateRequest",
+      "type": "object"
+    },
+    "POST /runs/{id}/gate": {
+      "$defs": {
+        "GateApproveRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "const": "approve",
+              "default": "approve",
+              "title": "Decision",
+              "type": "string"
+            }
+          },
+          "title": "GateApproveRequest",
+          "type": "object"
+        },
+        "GateEditRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "const": "edit",
+              "default": "edit",
+              "title": "Decision",
+              "type": "string"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Note"
+            }
+          },
+          "title": "GateEditRequest",
+          "type": "object"
+        },
+        "GateRejectRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "const": "reject",
+              "default": "reject",
+              "title": "Decision",
+              "type": "string"
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reason"
+            }
+          },
+          "title": "GateRejectRequest",
+          "type": "object"
+        }
+      },
+      "discriminator": {
+        "mapping": {
+          "approve": "#/$defs/GateApproveRequest",
+          "edit": "#/$defs/GateEditRequest",
+          "reject": "#/$defs/GateRejectRequest"
+        },
+        "propertyName": "decision"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/GateApproveRequest"
+        },
+        {
+          "$ref": "#/$defs/GateRejectRequest"
+        },
+        {
+          "$ref": "#/$defs/GateEditRequest"
+        }
+      ]
+    },
+    "POST /settings/providers/{p}/test": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "title": "TestProviderRequest",
+      "type": "object"
+    },
+    "POST /steps/{id}/rerun": {
+      "additionalProperties": false,
+      "properties": {
+        "force": {
+          "default": false,
+          "title": "Force",
+          "type": "boolean"
+        }
+      },
+      "title": "RerunStepRequest",
+      "type": "object"
+    }
+  },
+  "sseEvent": {
+    "$defs": {
+      "CostEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "amountCents": {
+            "title": "Amountcents",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "event": {
+            "const": "cost",
+            "default": "cost",
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "amountCents"
+        ],
+        "title": "CostEvent",
+        "type": "object"
+      },
+      "DoneEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "done",
+            "default": "done",
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "status"
+        ],
+        "title": "DoneEvent",
+        "type": "object"
+      },
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "ErrorEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/$defs/ErrorEnvelope"
+          },
+          "event": {
+            "const": "error",
+            "default": "error",
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Runid"
+          },
+          "stepId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stepid"
+          }
+        },
+        "required": [
+          "id",
+          "error"
+        ],
+        "title": "ErrorEvent",
+        "type": "object"
+      },
+      "GateKind": {
+        "description": "The 5 ordered approval gates (plan\u2192concept\u2192mesh\u2192overlay\u2192export; safety rule 6).\n\nA protocol/workflow concept (which gate the run is paused at) \u2014 defined here, not a 0.4\ndomain-entity field.",
+        "enum": [
+          "plan",
+          "concept",
+          "mesh",
+          "overlay",
+          "export"
+        ],
+        "title": "GateKind",
+        "type": "string"
+      },
+      "GateNeededEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "gate-needed",
+            "default": "gate-needed",
+            "title": "Event",
+            "type": "string"
+          },
+          "gate": {
+            "$ref": "#/$defs/GateKind"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemid"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "gate"
+        ],
+        "title": "GateNeededEvent",
+        "type": "object"
+      },
+      "LogEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "log",
+            "default": "log",
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/$defs/LogLevel"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "stepId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stepid"
+          }
+        },
+        "required": [
+          "id",
+          "level",
+          "message"
+        ],
+        "title": "LogEvent",
+        "type": "object"
+      },
+      "LogLevel": {
+        "description": "Wire-level log severity for the SSE ``log`` event (protocol concept, not a 0.4 enum).",
+        "enum": [
+          "debug",
+          "info",
+          "warning",
+          "error"
+        ],
+        "title": "LogLevel",
+        "type": "string"
+      },
+      "ProgressEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "progress",
+            "default": "progress",
+            "title": "Event",
+            "type": "string"
+          },
+          "fraction": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Fraction",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "fraction"
+        ],
+        "title": "ProgressEvent",
+        "type": "object"
+      },
+      "StepStateEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "step-state",
+            "default": "step-state",
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stepId": {
+            "title": "Stepid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "stepId",
+          "status"
+        ],
+        "title": "StepStateEvent",
+        "type": "object"
+      },
+      "ValidationEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "const": "validation",
+            "default": "validation",
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemid"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "severity",
+          "message"
+        ],
+        "title": "ValidationEvent",
+        "type": "object"
+      }
+    },
+    "discriminator": {
+      "mapping": {
+        "cost": "#/$defs/CostEvent",
+        "done": "#/$defs/DoneEvent",
+        "error": "#/$defs/ErrorEvent",
+        "gate-needed": "#/$defs/GateNeededEvent",
+        "log": "#/$defs/LogEvent",
+        "progress": "#/$defs/ProgressEvent",
+        "step-state": "#/$defs/StepStateEvent",
+        "validation": "#/$defs/ValidationEvent"
+      },
+      "propertyName": "event"
+    },
+    "oneOf": [
+      {
+        "$ref": "#/$defs/ProgressEvent"
+      },
+      {
+        "$ref": "#/$defs/StepStateEvent"
+      },
+      {
+        "$ref": "#/$defs/LogEvent"
+      },
+      {
+        "$ref": "#/$defs/ValidationEvent"
+      },
+      {
+        "$ref": "#/$defs/CostEvent"
+      },
+      {
+        "$ref": "#/$defs/GateNeededEvent"
+      },
+      {
+        "$ref": "#/$defs/DoneEvent"
+      },
+      {
+        "$ref": "#/$defs/ErrorEvent"
+      }
+    ]
+  }
+}

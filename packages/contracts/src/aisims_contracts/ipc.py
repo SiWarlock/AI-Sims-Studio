@@ -2,12 +2,16 @@
 UI and the FastAPI sidecar.
 
 SHAPES only: the FastAPI routes, the SSE stream, and the loopback-token / idempotency
-middleware are Phase 2 (sidecar); the TS client is 0.6. Per Step-2.5 Q1 (0.3↔0.4 coupling,
-option A-refined), this is the domain-INDEPENDENT protocol surface — SSE events reference
-domain objects by ``str`` IDs + protocol-level status/severity strings; REST response bodies
-that return domain entities (Project / PipelineRun / Step / ValidationResult) are defined in
-0.4. Conventions follow 0.2: the ``aisims_contracts`` package, ``extra="forbid"``, and
-camelCase wire field names (no alias indirection, §4).
+middleware are Phase 2 (sidecar); the TS client is 0.6. SSE events reference domain objects by
+``str`` IDs (never embedded entities); the REST response bodies that return domain entities live
+in ``responses.py`` (0.4b). Per the D15 tightening (0.4b), the four SSE fields that ARE a §12
+domain enum now carry that enum (``StepStateEvent.status`` → ``StepState``; ``DoneEvent.status``
+→ the run-terminal subset; ``ValidationEvent.severity``/``.scope`` → ``Severity``/
+``ValidationScope``) — so this module now imports those three domain enums (the acyclic edge
+``ipc → domain``; ``domain`` never imports ``ipc``). Protocol-level status/severity concepts that
+are NOT a §12 enum (``LogLevel``, ``GateKind``) stay defined here. Conventions follow 0.2: the
+``aisims_contracts`` package, ``extra="forbid"``, and camelCase wire field names (no alias
+indirection, §4).
 """
 
 from enum import StrEnum
@@ -15,6 +19,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+from aisims_contracts.domain import Severity, StepState, ValidationScope
 from aisims_contracts.error import ErrorCode, ErrorEnvelope
 
 # --- versioning + wire conventions (§4, §16) ---
@@ -61,10 +66,10 @@ class GateKind(StrEnum):
 
 # ===========================================================================================
 # SSE event taxonomy (§4) — a discriminated union keyed on the ``event`` Literal tag. Each event
-# carries ``id`` (the resume cursor, Q4=str). Per the Q1 guardrail, status/severity fields are
-# classified: PROTOCOL concepts (log level, gate kind) are enums here; DOMAIN fields that ARE a
-# 0.4 enum (Step status, run status, ValidationResult scope/severity) stay str + a MANDATORY
-# pinned 0.4 tightening. Domain objects are referenced by str IDs, never embedded entities.
+# carries ``id`` (the resume cursor, Q4=str). status/severity fields are classified: PROTOCOL
+# concepts (log level, gate kind) are enums defined here; DOMAIN fields that ARE a §12 enum (Step
+# status, run-terminal status, ValidationResult scope/severity) carry that domain enum as of the
+# D15 0.4b tightening. Domain objects are referenced by str IDs, never embedded entities.
 # ===========================================================================================
 class _SseEventBase(_Wire):
     """Common SSE envelope: the resume cursor shared by every event."""
@@ -84,9 +89,9 @@ class StepStateEvent(_SseEventBase):
     event: Literal["step-state"] = "step-state"
     runId: str
     stepId: str
-    # DOMAIN field (the §12/§6 Step 8-state lifecycle) → str here, MANDATORY-tightened to the
-    # Step-status enum in 0.4 (pinned carry-forward); no loose domain str survives the merge.
-    status: str
+    # DOMAIN field (the §12/§6 Step 8-state lifecycle) → the StepState enum (D15-tightened, 0.4b);
+    # no loose domain str survives. An out-of-enum value is rejected at the boundary.
+    status: StepState
 
 
 class LogEvent(_SseEventBase):
@@ -98,10 +103,11 @@ class LogEvent(_SseEventBase):
 
 class ValidationEvent(_SseEventBase):
     event: Literal["validation"] = "validation"
-    # DOMAIN fields (§12 ValidationResult.scope/.severity) → str here, MANDATORY-tightened to the
-    # domain enums in 0.4 (pinned carry-forward); the full ValidationResult entity lands in 0.4.
-    scope: str
-    severity: str
+    # DOMAIN fields (§12 ValidationResult.scope/.severity) → the domain enums (D15-tightened, 0.4b);
+    # §17 Severity ⊃ this wire severity. The full ValidationResult entity rides the REST body
+    # (ValidateResponse in responses.py); the SSE event streams the scope/severity/message.
+    scope: ValidationScope
+    severity: Severity
     message: str
     itemId: str | None = None
 
@@ -124,9 +130,11 @@ class GateNeededEvent(_SseEventBase):
 class DoneEvent(_SseEventBase):
     event: Literal["done"] = "done"
     runId: str
-    # DOMAIN field (the §12/§6 PipelineRun terminal status) → str here, MANDATORY-tightened to the
-    # run-status enum in 0.4 (pinned carry-forward).
-    status: str
+    # DOMAIN field (the §12/§6 PipelineRun terminal status) → the run-TERMINAL subset of StepState
+    # (D15-tightened, 0.4b). A ``done`` event can only report a terminal run state, so the type is a
+    # Literal subset {succeeded, failed, cancelled} — no separate enum is minted (Lesson 5). Emits a
+    # clean ``{"enum": ["succeeded","failed","cancelled"]}`` for the 0.6 TS codegen.
+    status: Literal[StepState.SUCCEEDED, StepState.FAILED, StepState.CANCELLED]
 
 
 class ErrorEvent(_SseEventBase):

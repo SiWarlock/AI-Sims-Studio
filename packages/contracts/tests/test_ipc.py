@@ -9,10 +9,12 @@ idempotency-key header conventions, and the §2.5-seam combined schema snapshot.
 
 import json
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
 
+from aisims_contracts.domain import Severity, StepState, ValidationScope
 from aisims_contracts.error import ErrorCategory, ErrorCode, ErrorEnvelope
 from aisims_contracts.ipc import (
     CONTRACT_VERSION,
@@ -24,6 +26,7 @@ from aisims_contracts.ipc import (
     SSE_ADAPTER,
     SSE_EVENT_MODELS,
     TOKEN_HEADER,
+    DoneEvent,
     Endpoint,
     ErrorEvent,
     GateKind,
@@ -31,6 +34,8 @@ from aisims_contracts.ipc import (
     IpcRequestHeaders,
     LogLevel,
     ProgressEvent,
+    StepStateEvent,
+    ValidationEvent,
     ipc_schema,
 )
 
@@ -138,6 +143,48 @@ def test_progress_fraction_bounded() -> None:  # spec(§4)
     for bad in (-0.1, 1.1):
         with pytest.raises(ValidationError):
             ProgressEvent(id="1", runId="r", fraction=bad)
+
+
+def test_sse_fields_tightened() -> None:  # spec(§4)
+    """[D15] The 4 loose SSE str fields are now their domain enums; out-of-enum values reject.
+
+    Lesson 5: a freeze-before-dependency seam ships str first, then a mandatory pinned tighten
+    once the dependency (0.4a domain enums) lands. No loose domain str survives the SSE union.
+    """
+    assert StepStateEvent.model_fields["status"].annotation is StepState
+    assert ValidationEvent.model_fields["severity"].annotation is Severity
+    assert ValidationEvent.model_fields["scope"].annotation is ValidationScope
+    # DoneEvent.status is the 4th tightened field — a Literal subset; pin its exact members.
+    assert get_args(DoneEvent.model_fields["status"].annotation) == (
+        StepState.SUCCEEDED,
+        StepState.FAILED,
+        StepState.CANCELLED,
+    )
+    # Accept a valid enum value; reject an out-of-enum one (membership now pins the value).
+    StepStateEvent(id="1", runId="r", stepId="s", status=StepState.RUNNING)
+    with pytest.raises(ValidationError):
+        StepStateEvent(id="1", runId="r", stepId="s", status="bogus")
+    ValidationEvent(id="1", scope=ValidationScope.MESH, severity=Severity.ERROR, message="m")
+    with pytest.raises(ValidationError):
+        ValidationEvent(id="1", scope="nope", severity=Severity.ERROR, message="m")
+    with pytest.raises(ValidationError):
+        ValidationEvent(id="1", scope=ValidationScope.MESH, severity="nope", message="m")
+
+
+def test_done_status_terminal_subset() -> None:  # spec(§4)
+    """DoneEvent.status is the run-terminal subset {succeeded, failed, cancelled}; others reject.
+
+    The ``done`` event is run-terminal (§6/§12 PipelineRun) — non-terminal run states must not
+    validate, and no separate RunTerminalStatus enum is minted (Lesson 5, subset via Literal).
+    """
+    for ok in (StepState.SUCCEEDED, StepState.FAILED, StepState.CANCELLED):
+        DoneEvent(id="1", runId="r", status=ok)
+    for bad in ("running", "pending", "waiting-for-user", "retrying", "skipped"):
+        with pytest.raises(ValidationError):
+            DoneEvent(id="1", runId="r", status=bad)
+    # A non-terminal StepState *member* (not just its raw string) is also rejected.
+    with pytest.raises(ValidationError):
+        DoneEvent(id="1", runId="r", status=StepState.RUNNING)
 
 
 def test_ipc_schema_snapshot() -> None:  # spec(§4)

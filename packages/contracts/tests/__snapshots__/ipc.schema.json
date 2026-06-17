@@ -607,6 +607,11 @@
             "type": "string"
           },
           "status": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "cancelled"
+            ],
             "title": "Status",
             "type": "string"
           }
@@ -907,6 +912,32 @@
         "title": "ProgressEvent",
         "type": "object"
       },
+      "Severity": {
+        "description": "ValidationResult severity (\u00a717 \u2283 the IPC ValidationEvent severity, tightened in 0.4b).",
+        "enum": [
+          "error",
+          "warn",
+          "info",
+          "pass"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "StepState": {
+        "description": "The 8-state Run/Step machine (PipelineRun.status + Step.state share it).",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "waiting-for-user",
+          "cancelled",
+          "retrying",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
+      },
       "StepStateEvent": {
         "additionalProperties": false,
         "properties": {
@@ -925,8 +956,7 @@
             "type": "string"
           },
           "status": {
-            "title": "Status",
-            "type": "string"
+            "$ref": "#/$defs/StepState"
           },
           "stepId": {
             "title": "Stepid",
@@ -972,12 +1002,10 @@
             "type": "string"
           },
           "scope": {
-            "title": "Scope",
-            "type": "string"
+            "$ref": "#/$defs/ValidationScope"
           },
           "severity": {
-            "title": "Severity",
-            "type": "string"
+            "$ref": "#/$defs/Severity"
           }
         },
         "required": [
@@ -988,6 +1016,17 @@
         ],
         "title": "ValidationEvent",
         "type": "object"
+      },
+      "ValidationScope": {
+        "enum": [
+          "project",
+          "item",
+          "mesh",
+          "overlay",
+          "export"
+        ],
+        "title": "ValidationScope",
+        "type": "string"
       }
     },
     "discriminator": {

@@ -185,12 +185,15 @@ uv run mypy packages/contracts
 uv run pytest
 ```
 
-### Step 6 — Build
+### Step 6 — Build (codegen drift check)
 ```bash
-uv run python -m contracts.codegen
+uv run python -m aisims_contracts.codegen --check
 ```
 
-<!-- Keep a build step only if the area's build catches a class of errors the
+<!-- A preflight VERIFIES in-sync, it never mutates the tree: use `--check`
+     (regenerate in-memory + diff the committed generated/ tree, non-zero on
+     drift), NOT a bare regen. Module is `aisims_contracts.codegen` (0.6).
+     Keep a build step only if the area's build catches a class of errors the
      type-checker alone doesn't (e.g. the pydantic→TS codegen). -->
 
 ---

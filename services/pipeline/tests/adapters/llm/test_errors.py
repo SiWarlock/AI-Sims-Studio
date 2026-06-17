@@ -69,6 +69,17 @@ def test_build_envelope_unclassified_code_degrades_to_system() -> None:
     assert envelope.retryable is False
 
 
+def test_build_envelope_validation_failed_classified() -> None:
+    """VALIDATION_FAILED is a known §17 code (the 3.2 silhouette gate is its first emitter): it
+    classifies to VALIDATION / not-retryable — NOT the SYSTEM-degrade fallback."""
+    from adapters.errors import build_envelope
+
+    envelope = build_envelope(ErrorCode.VALIDATION_FAILED)
+    assert envelope.code is ErrorCode.VALIDATION_FAILED
+    assert envelope.category is ErrorCategory.VALIDATION
+    assert envelope.retryable is False
+
+
 def test_provider_error_carries_envelope() -> None:
     """The hoist (carry-forward 0.8/0.9): ProviderError lives in adapters.errors and is the SAME
     class re-exported from adapters.mock — so the mock surface (and its tests) stay intact, and a

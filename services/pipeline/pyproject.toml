@@ -18,6 +18,10 @@ dependencies = [
     # chat-completions). Raw httpx over the official SDKs keeps the model-agnostic seam thin
     # and the cassette wire-shape under our control (no SDK-version coupling). [3.3]
     "httpx>=0.27",
+    # §7 concept-image silhouette-quality gate: RGBA decode + alpha-channel coverage /
+    # connected-component / centeredness scoring. Pillow + numpy (lighter than opencv). [3.2]
+    "pillow>=10",
+    "numpy>=2",
 ]
 # The Postgres *server* + pgvector are bundled at deploy/packaging time (§19, Phase 10);
 # asyncpg/SQLAlchemy here are the client. The sidecar is the SOLE writer of Postgres +

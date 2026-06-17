@@ -78,6 +78,13 @@ _CLASSIFICATION: dict[ErrorCode, tuple[ErrorCategory, bool, str]] = {
         True,
         "The AI returned something we couldn't read — we'll try again.",
     ),
+    # A deterministic validation gate rejected the output (§17 / rule 6) — e.g. the 3.2 silhouette
+    # gate when no concept candidate passes. Terminal (the caller decides regenerate-vs-fail).
+    ErrorCode.VALIDATION_FAILED: (
+        ErrorCategory.VALIDATION,
+        False,
+        "Something didn't pass our safety and validation checks.",
+    ),
     ErrorCode.SYSTEM: (
         ErrorCategory.SYSTEM,
         False,

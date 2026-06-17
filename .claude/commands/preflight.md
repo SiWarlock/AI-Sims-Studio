@@ -67,7 +67,7 @@ pnpm build
 
 ### Step 1 — Sync dependencies
 ```bash
-uv sync
+uv sync --all-packages  # workspace-wide: never prune the shared root dev group (mypy/ruff/pytest); a bare per-area `uv sync` does (local fix D19; scaffolding-source bug is P5)
 ```
 
 ### Step 2 — Lint
@@ -133,7 +133,7 @@ pnpm build
 
 ### Step 1 — Sync dependencies
 ```bash
-uv sync
+uv sync --all-packages  # workspace-wide: never prune the shared root dev group (mypy/ruff/pytest); a bare per-area `uv sync` does (local fix D19; scaffolding-source bug is P5)
 ```
 
 ### Step 2 — Lint
@@ -162,7 +162,7 @@ uv run pytest
 
 ### Step 1 — Sync dependencies
 ```bash
-uv sync
+uv sync --all-packages  # workspace-wide: never prune the shared root dev group (mypy/ruff/pytest); a bare per-area `uv sync` does (local fix D19; scaffolding-source bug is P5)
 ```
 
 ### Step 2 — Lint
@@ -199,7 +199,7 @@ uv run python -m contracts.codegen
 
 ### Step 1 — Sync dependencies
 ```bash
-uv sync
+uv sync --all-packages  # workspace-wide: never prune the shared root dev group (mypy/ruff/pytest); a bare per-area `uv sync` does (local fix D19; scaffolding-source bug is P5)
 ```
 
 ### Step 2 — Lint

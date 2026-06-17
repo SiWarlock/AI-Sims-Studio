@@ -123,8 +123,15 @@ attacks, §16). **`contractVersion`** negotiated at `/health`. Surfaces:
   `POST /items/{id}/functional`, `POST /projects/{id}/validate`, `POST /projects/{id}/export`,
   `POST /projects/{id}/test-install`, `POST /steps/{id}/rerun`, `DELETE /jobs/{id}` (cancel),
   `GET/PUT /settings`, `POST /settings/providers/{p}/test`. Commands carry an **idempotency key** (R9).
+  Per-endpoint **success-response bodies** embed the §12 domain entities (`responses.py`: CREATE→`Project`,
+  run/gate/regenerate/test-install→`PipelineRun`, include→`ItemSpec`, functional→`FunctionalOverlay`,
+  validate→`list[ValidationResult]`, export→`ExportArtifact`, rerun→`Step`; protocol acks for cancel/settings/
+  test-provider).
 - **SSE event taxonomy** (`GET /projects/{id}/events`, resumable via `Last-Event-ID`), each a typed payload:
   `progress`, `step-state`, `log`, `validation`, `cost`, `gate-needed`, `done`, **`error`** (`ErrorEnvelope`).
+  Domain-typed payload fields are the §12 enums (`step-state`/`done` status → `StepState`/run-terminal subset;
+  `validation` severity+scope → `Severity`/`ValidationScope`; `gate-needed` gate → `GateKind`), not loose
+  strings (0.4b/D15).
 - **Cancel:** `DELETE /jobs/{id}` flips a cooperative cancel flag (see §17 cancel semantics).
 **py↔ts sync (frozen guarantee):** pydantic models are the single source → JSON Schema → generated TS (UI) +
 Node (worker) types; **CI drift gate** fails on divergence. All persisted entities carry `schemaVersion`.
@@ -193,7 +200,9 @@ COBJ, MODL, MLOD, GEOM/LOD, FTPT, RIG, _IMG/DST, thumbnails; OBJD tuning instanc
 (R-e):** write to temp → fsync → **DBPF round-trip + structural validation** → atomic rename into the app
 output dir; **test-install copies** the validated artifact into the Mods folder (never builds in place; no
 clobber without confirm; donors opened read-only). `ExportJob{donorRef, geomBytesRef, textures, tuningEdits,
-targetTGIKeys, jobId} → ExportReport{packagePath, includedItems, resourceManifest, status, error?}`.
+targetTGIKeys, jobId} → ExportJobReport{packagePath, includedItems, resourceManifest, status, error?}`
+(the worker result — named `ExportJobReport` to stay distinct from the §12 domain `ExportReport` summary; the
+report's `status`↔outputs consistency is contract-enforced — deterministic worker-output validation, rule 6).
 **Partial success = per-item packages each individually complete-and-valid**, never a half-written file. The
 mesh→GEOM half (§8) is the #1 risk; this packager half is feasible on Mac (@s4tk). Functional behavior =
 which donor archetype is cloned (§10/§11), not extra mesh work.
@@ -211,10 +220,12 @@ install — standard Sims-modding posture (RISKS + research-required note; not a
 Open, data-driven, **version-controlled config files = source of truth**, loaded + validated into Postgres as a
 read cache/index at startup (each carries a `registryVersion`). Three registries with specified entry JSON +
 rule sub-grammars: **PlacementType** `{id,name,donorRef,footprintRules}`; **FunctionalArchetype**
-`{id,name,donorRef,tuningGraftRules[],eligibilityPredicate,validationRules[]}`; **DonorMapping**
+`{id,name,donorRef,tuningGraftRules[],eligibilityRules[],validationRules[]}`; **DonorMapping**
 `{key,donorObjectKey,requiredResources[],tuningKeys[],preserveKeys[]}`. Adding an entry = config + donor +
 test (no engine rewrite, ADR-010). The tuning-graft + eligibility sub-grammars are pinned by **spike S3**
-(one archetype proves the schema). Decorative generation is unconstrained by item type.
+(one archetype proves the schema) — the 0.5c contract freezes each rule list as `list[RuleSpec{kind,params}]`
+(open) pending S3, and `validate_registry` is Inv6's eventual load-time enforcement point. Decorative generation
+is unconstrained by item type.
 
 ## §12 — Domain model & data/state
 Entities, relationships, **state machines**, invariants: `docs/planning/DATA_MODEL.md` (the canonical domain
@@ -400,11 +411,11 @@ before parallel tracks fork.**
 | Model | Section | Fields (summary) | Shared contract? |
 |---|---|---|---|
 | `ErrorEnvelope` | §17 | code, category, retryable, creatorMessage, maintainerDetail, traceRef, suggestedAction | **Yes (all tracks)** |
-| IPC command/SSE-event schema | §4 | endpoint table; event types {progress,step-state,log,validation,cost,gate-needed,done,error}; contractVersion; idempotencyKey; token | **Yes (A↔B)** |
+| IPC command/SSE-event schema (`ipc.py` + `responses.py`) | §4 | endpoint table + per-endpoint **response bodies** (embed §12 entities); event types {progress,step-state,log,validation,cost,gate-needed,done,error} with domain fields typed to §12 enums (`StepState`/`Severity`/`ValidationScope`) + `GateKind`; contractVersion; idempotencyKey; token | **Yes (A↔B)** |
 | `ProviderJobRef` | §7 | provider, model, jobId, submittedAt, expiresAt? | **Yes (B↔E)** |
-| `Image3DProvider`/`ImageGenProvider`/`LLMProvider` | §7 | submit/poll/fetch (PollStatus); complete/structured | **Yes (B↔E)** |
+| `Image3DProvider`/`ImageGenProvider`/`LLMProvider` (+ `PollResult`/`ProviderUsage`/`PollStatus`) | §7 | `submit/poll/fetch` → `ProviderJobRef` / `PollResult{status:PollStatus,progress?,urls?,usage:ProviderUsage?,error?}`; `complete→str`/`structured→T`; cost+latency in `ProviderUsage{latencyMs,costCents?}`; open `params:dict[str,Any]` | **Yes (B↔E)** |
 | `BlenderJob`/`BlenderReport` (+ GEOM-bytes payload) | §8 | meshPath/params/donorBBox → geomBytesRef/previewRef/gateMetrics/status/error | **Yes (C↔D, B↔D)** |
-| `ExportJob`/`ExportReport` | §9 | donorRef/geomBytesRef/textures/tuningEdits/targetTGIKeys → packagePath/resourceManifest/status/error | **Yes (B↔C)** |
+| `ExportJob`/`ExportJobReport` | §9 | donorRef/geomBytesRef/textures/tuningEdits/targetTGIKeys → packagePath/includedItems/resourceManifest/status/error (refs `min_length=1`; `status`↔outputs `model_validator`, rule 6). **`ExportJobReport` ≠ the §12 domain `ExportReport`** (distinct seam, name disambiguated 0.5b) | **Yes (B↔C)** |
 | PlacementType / FunctionalArchetype / DonorMapping | §11 | entry JSON + rule sub-grammars; registryVersion | **Yes (C/D↔registries)** |
 | Project / CollectionPlan / StyleBible / ItemSpec | §12 | see DATA_MODEL.md | Yes (A↔B) |
 | ConceptCandidate / MeshCandidate / AssetVariant / Swatch | §12 | see DATA_MODEL.md (+ AssetVariant state machine) | Yes (A↔B) |

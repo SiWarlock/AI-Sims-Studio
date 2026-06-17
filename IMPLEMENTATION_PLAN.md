@@ -25,17 +25,27 @@
 
 ## Currently in progress
 
-**Phase 0 — contract track.** 0.1 (scaffold) + 0.2 (ErrorEnvelope) + 0.3 (IPC contract) **LANDED** on
-`track/contract` (`143381a`, `c93215b`, `e7b628a`; + `b0c3803` spec-lint tooling). Commit gate operational
-(hooks regenerated machine-valid; gitleaks blocking). Orchestrator round docs (ARCHITECTURE/CLAUDE/
-IMPLEMENTATION_PLAN edits + 2 briefs + decision file) **accumulating uncommitted** for the `/orchestrate-end`
-round commit + push (next trigger: context auto-cycle at ACTION, Phase-0 exit, or user return).
+**Phase 0 — contract track (8 slices landed: 0.1–0.4b + 0.5a/b/c). 🏁 ALL §2.5 CONTRACTS FROZEN.** 0.1 (scaffold)
++ 0.2 (ErrorEnvelope) + 0.3 (IPC) + 0.4a (domain) **SEALED** in round 1 at `d1aa05b` (pushed to origin/track/contract).
+**Round 2 (unpushed):** 0.4b (IPC completion) `35f1a2e`+`7d701a6`; 0.5a (providers §7) `de7caee`; 0.5b (workers
+§8/§9) `ccce712`; 0.5c (registries §11) `818024d`. The frozen §2.5-seam family is now complete — error/ipc/responses/
+domain/providers/workers/registries, each with a `spec(§X)` snapshot. 62 contracts tests green; `mypy --strict` clean.
+**Orchestrator round-2 docs accumulating uncommitted** (this reconcile + briefs `contract-004…007` + the
+IPC/responses/providers/workers/registries cross-doc rows + §4/§7/§9/§11/Appendix-A notes incl. `ExportJobReport`
+disambiguation + `eligibilityPredicate`→`eligibilityRules` + Lessons 6–11 + 4 carry-forwards) — landing now in the
+`/orchestrate-end` round commit + **push to origin/track/contract** (lead-authorized **D18** — a milestone
+CHECKPOINT that backs up Round-2 + makes the frozen contracts AVAILABLE on origin; **NOT** the fork-unblocking
+integration merge).
 
-**Next session target:** `0.4a` (Domain types — 16 entities + state-machine enums + structural invariants +
-`domain.schema.json`) **IN FLIGHT** (split from 0.4 per D16, lead-approved). `0.4b` (IPC completion: REST
-response bodies + the str→domain-enum tightening of 0.3's 4 SSE fields + `GateKind` import + `ipc.schema.json`
-re-freeze) follows, **depends on 0.4a**. Inv1 (full exportability gate) + Inv5 (ordered approval gates) are
-PINNED, non-droppable **Phase-2** safety acceptance items (D16) — 0.4a encodes only the structural part.
+**Next session target:** **round close-out IN PROGRESS** (lead-authorized **D18** — milestone checkpoint, NOT a
+context cycle: impl `/session-end` Round-2 doc + orch `/orchestrate-end` doc-round commit + push; SAME teammates
+continue, no respawn). ⏳ **PENDING cross-track decision — when the other 6 tracks fork:** the push is a checkpoint,
+not fork-unblocking; the tracks formally fork only after THIS track finishes Phase 0 (0.6 codegen → 0.9; **codegen
+gates the TS-consuming ui/workers tracks**) + merges to integration. That timing is **DEFERRED to Phase-0 exit /
+user return (D18)** — do NOT merge to main/integration or declare parallelization unblocked now. Next slice after
+close-out: `0.6` (py↔ts codegen + CI drift gate, §4) — consumes every `*.schema.json`; tooling, not a §2.5 model.
+Then 0.7 (store) – 0.9, then `/phase-exit 0`. Inv1 (full exportability gate) + Inv5 (ordered approval gates) remain
+PINNED non-droppable **Phase-2** safety items (D16). (0.5 was decomposed → 0.5a/0.5b/0.5c.)
 
 ---
 
@@ -44,6 +54,9 @@ PINNED, non-droppable **Phase-2** safety acceptance items (D16) — 0.4a encodes
 - **ErrorEnvelope `code` consumer-tolerance (origin: 2026-06-17 · 0.2 / D10b).** UI SSE/IPC deserialization + the 0.6 TS codegen type MUST degrade gracefully on an unrecognized `code` → map to `SYSTEM`, so a future additive enum split (e.g. `PROVIDER_AUTH` + `PROVIDER_QUOTA`) is non-breaking. The 0.2 producer model stays a STRICT closed enum (RED #4 + `extra="forbid"`); tolerance lives in CONSUMERS. **Last-consumer-slice: 0.6** (codegen) + Phase 7 (UI deserialization). Strict model + tolerant consumers = the production-grade combo.
 - **⚠ SAFETY-TRACKED (rule 5, non-droppable) — ErrorEnvelope redaction-egress (origin: 2026-06-17 · 0.2).** `creatorMessage` + `maintainerDetail` are free-text PII/secret-bearing egress surfaces — the §16 redaction chokepoint / §14 tracing MUST scrub them before any logs/traces/SSE egress. Marked at the model via inline code comment + anchored in `ARCHITECTURE.md §17`. **Encoded as a PINNED, non-waivable acceptance bullet in task 0.9** (the obs/redaction seam) — the redaction impl cannot ship without a test covering both fields. **Last-consumer-slice: 0.9.**
 - **ErrorEnvelope JSON-Schema field titles (origin: 2026-06-17 · 0.2).** pydantic auto-derives schema `title`s from field names (`creatorMessage` → "Creatormessage"); these bake into the snapshot and surface in the 0.6 TS-codegen JSDoc. Set proper `Field(title=…)` (or handle in codegen) in **0.6** so generated consumer types read well — deferred to avoid churning the 0.2 freeze snapshot.
+- **`GateKind` import-DAG / relocation (origin: 2026-06-17 · 0.4b / Q5 / D15).** 0.4b made the `ipc → domain` import edge live (the 4 SSE fields tightened to domain enums). `GateKind` stays single-homed in `ipc.py` (no domain consumer yet; guarded by `test_gatekind_single_definition`). When a **Phase-2 domain gate model** needs `GateKind`, importing it from `ipc` would close an `ipc ↔ domain` cycle → **relocate `GateKind` to `domain.py` (or a neutral shared-enums module) then**, never import upward. `test_import_direction` mechanically pins the acyclic DAG (`error←domain←ipc←responses`), so the cycle can't land silently. **Last-consumer-slice: Phase-2 (the slice that adds a domain gate model).** (Lesson 5/6.)
+- **`StructuredT` TypeVar package-export (origin: 2026-06-17 · 0.5a).** `LLMProvider.structured`'s `StructuredT` (TypeVar bound=BaseModel) is importable from `aisims_contracts.providers` but is NOT in the package `__all__`. Decide package-level export when **0.8** mock adapters implement `LLMProvider.structured` (an adapter conforming to the Protocol doesn't strictly need it exported). **Last-consumer-slice: 0.8.**
+- **Snapshot-test hardening back-port (origin: 2026-06-17 · 0.5b).** 0.5b added two guards worth back-porting: (1) `min_length=1` on path/ref `str` fields (an empty-string ref passes a None-check but isn't a usable path — applies to providers `urls`/refs + domain path fields `imagePath`/`meshPath`/`outputPath`/… + registry `id`/`key`/`name`, 0.5c); (2) the explicit value-model-SET assertion in the snapshot test (`set(models)==expected` — catches a silently-dropped model before a blind regen). Apply to `test_providers.py` + `test_domain.py` in a hardening pass. **Last-consumer-slice: 0.6** (before codegen consumes the snapshots).
 
 ---
 
@@ -225,20 +238,38 @@ drift. No business logic — just the contracts, codegen, store skeleton, mock f
 - ✅ **LANDED** `4a69df5` (feat(contracts)). 25 contracts tests green; Trace.status→StepState; reviewer fixes in (MeshCandidate.userDecision, ExportMode enum). 0.4b (IPC completion) next.
 
 ### 0.4b — IPC contract completion (D15) — depends on 0.4a
-- [ ] **IPC REST response bodies** for the 14 §4 endpoints (embed domain entities) → NEW `responses.py` (imports ipc + domain; keeps `ipc.py` domain-independent as 0.3 froze it).
-- [ ] **[D15 · MANDATORY · PINNED] str→domain-enum tighten** 0.3's SSE fields: `StepStateEvent.status`→`StepState`; `DoneEvent.status`→run-terminal subset {succeeded,failed,cancelled}; `ValidationEvent.severity`→`Severity`; `ValidationEvent.scope`→`ValidationScope`. **Re-freeze `ipc.schema.json`.** No loose `str` domain-field survives.
-- [ ] **Import `GateKind` from `aisims_contracts.ipc`** wherever the domain gate model needs the 5 gates — do NOT redefine (no duplicate §2.5-seam enum).
-- [ ] Files: NEW `responses.py` + `test_responses.py`; MOD `ipc.py`/`test_ipc.py`/`ipc.schema.json` (re-frozen), `__init__.py`
-- [ ] Cross-doc invariant: CHANGED (IPC re-freeze — orchestrator updates the IPC row)
-- [ ] Depends on: 0.4a, 0.3
+- [x] **IPC REST response bodies** for the 14 §4 endpoints (embed domain entities) → NEW `responses.py` (imports ipc + domain; named model per endpoint, `RESPONSE_MODELS` symmetric w/ `REQUEST_MODELS`; tops the intra-package DAG — does not add domain deps to `ipc.py`).
+- [x] **[D15 · MANDATORY · PINNED] str→domain-enum tighten** 0.3's SSE fields: `StepStateEvent.status`→`StepState`; `DoneEvent.status`→`Literal[succeeded,failed,cancelled]`; `ValidationEvent.severity`→`Severity`; `ValidationEvent.scope`→`ValidationScope`. **Re-froze `ipc.schema.json`.** No loose `str` domain-field survives. (ipc.py now imports the 3 enums from `domain` — no longer domain-independent for the SSE surface.)
+- [x] **`GateKind` single-homed** in `ipc.py` — guarded by `test_gatekind_single_definition` (no duplicate); no domain gate model exists yet to import the 5 gates. Future relocation tracked in Carry-forward (Q5 `ipc↔domain` cycle risk).
+- [x] Files: NEW `responses.py` + `test_responses.py` + `responses.schema.json`; MOD `ipc.py`/`test_ipc.py`/`ipc.schema.json` (re-frozen), `__init__.py`
+- [x] Cross-doc invariant: CHANGED (IPC re-freeze + NEW `responses` row — orchestrator updated the IPC row + added the responses row + §4/Appendix-A note + Lesson 6)
+- [x] Depends on: 0.4a, 0.3 (landed)
+- ✅ **LANDED** C1 `35f1a2e` (SSE tighten / D15) + C2 `7d701a6` (responses + spec(§4) snapshot). 33 tests green; `mypy --strict` clean. `test_import_direction` pins the acyclic DAG (Q5 guard). Reviewers: test-completeness only, fixed in-slice. Phase 0 now 5 slices landed (0.1–0.4b).
 
-### 0.5 — Provider + worker + registry contracts
-- [ ] `Image3DProvider`/`ImageGenProvider` (`submit/poll/fetch` + `ProviderJobRef{provider,model,jobId,submittedAt,expiresAt?}` + PollStatus + cost/latency); `LLMProvider` (`complete/structured`) — §7.
-- [ ] `BlenderJob`/`BlenderReport` (+ **GEOM-bytes** payload) and `ExportJob`/`ExportReport` worker envelopes (§8/§9).
-- [ ] Registry-entry JSON schemas + rule sub-grammars for PlacementType/FunctionalArchetype/DonorMapping (§11) + load-time validator; `registryVersion`.
-- [ ] Files: NEW `packages/contracts/{providers,workers,registries}.py` + generated TS
-- [ ] Cross-doc invariant: NEW (all §2.5-seam → schema-snapshot tests)
-- [ ] Depends on: 0.2, 0.4
+### 0.5 — Provider + worker + registry contracts  *(decomposed into 0.5a/0.5b/0.5c — 3 distinct §2.5 seams, each its own schema-snapshot + different Step-2.5 design questions; orchestrator sizing call mirroring the 0.4→0.4a/0.4b split, confirm at 0.5a Step-2.5 Q0. Generated TS for all three → 0.6.)*
+
+### 0.5a — Provider adapter contracts (§7)
+- [x] `Image3DProvider`/`ImageGenProvider` (`submit/poll/fetch`) + `LLMProvider` (`complete/structured`) as model-agnostic `Protocol` interfaces (concrete mock+real impls are 0.8/Phase-2, NOT here); `ProviderJobRef{provider,model,jobId,submittedAt,expiresAt?}`; `PollStatus{submitted,running,succeeded,failed,expired}`; `PollResult{status,progress?,urls?,usage?,error?}`; `ProviderUsage{latencyMs,costCents?}` (`ge=0`) carries **cost+latency** (§7/§21; LLM sync path records on domain `Step`). Open `params:dict[str,Any]` (bakeoff, Inv6-analogue). submit first-arg diverges (image-to-3D `image:bytes` / text-to-image `prompt:str`).
+- [x] Files: NEW `packages/contracts/src/aisims_contracts/providers.py` + `tests/test_providers.py` + `tests/__snapshots__/providers.schema.json` + `tests/conftest.py` (shared `intra_imports` fixture); MOD `__init__.py`, `tests/test_responses.py` (dedup to fixture).
+- [x] Cross-doc invariant: NEW (§2.5-seam → schema-snapshot) — orchestrator wrote the providers row + §7/Appendix-A confirm + Lesson 7 (interface-seam freeze).
+- [x] Depends on: 0.2 (ErrorEnvelope in results/PollStatus failure)
+- ✅ **LANDED** `de7caee` (feat(contracts), 1 commit). 42 tests green; `mypy --strict` clean. Protocols frozen by `test_provider_interface_signatures`; value models by `spec(§7)` snapshot. Reviewers: fixed in-slice (+ proactive `ge=0` on ProviderUsage). conftest dedup rides the commit.
+
+### 0.5b — Worker job/report contracts (§8/§9)
+- [x] `BlenderJob{meshPath,params,donorBBox:BBox,jobId}`→`BlenderReport{geomBytesRef,previewRef,gateMetrics:GateMetrics{normals,uv,lods,polyByTile,meshgroups},status,error?}` (+ GEOM-bytes payload); `ExportJob{donorRef,geomBytesRef,textures,tuningEdits,targetTGIKeys,jobId}`→**`ExportJobReport`**`{packagePath,includedItems,resourceManifest,status,error?}`. **Name collision resolved (Q1):** §9 worker report renamed `ExportReport`→`ExportJobReport` (≠ the §12 domain `ExportReport`); orchestrator updated §9 + Appendix-A.
+- [x] Worker-local status enums `BlenderJobStatus{succeeded,failed}`/`ExportJobStatus{succeeded,partial,failed}` (node maps onto domain `ExportState`). **Safety (rule 3+6):** artifact fields are scratch-path `str` refs (`min_length=1`, never inline bytes); a status↔outputs `model_validator` rejects malformed reports at the boundary.
+- [x] Files: NEW `workers.py` + `test_workers.py` + `workers.schema.json` (combined `spec(§8/§9)`); MOD `__init__.py`
+- [x] Cross-doc invariant: NEW (§2.5-seam → schema-snapshot) — orchestrator wrote the workers row + §9/Appendix-A `ExportJobReport` disambiguation + Lessons 8–9
+- [x] Depends on: 0.2, 0.4 (landed)
+- ✅ **LANDED** `ccce712` (feat(contracts), 1 commit). 52 tests green; `mypy --strict` clean. security-reviewer PASS (rule-3/rule-6 surface; `min_length=1` empty-ref catch). conftest fixture reused.
+
+### 0.5c — Registry entry-schema contracts + load-time validator (§11)
+- [x] Entry models: `PlacementType{id,name,donorRef,footprintRules}`; `FunctionalArchetype{id,name,donorRef,tuningGraftRules[],eligibilityRules[],validationRules[]}` (`eligibilityPredicate`→`eligibilityRules`, §11 reconciled); `DonorMapping{key,donorObjectKey,requiredResources[],tuningKeys[],preserveKeys[]}`. Rule lists = flexible `RuleSpec{kind,params}` (grammar S3-pinned, not over-specified). Versioned collection wrappers `{registryVersion:int, entries}`.
+- [x] Pure `validate_registry(raw,type)→list[RegistryFinding{issue:RegistryIssue, error:ErrorEnvelope, entryKey?}]` — structural validity + registryVersion + id/key uniqueness ONLY (no donor-resolution/rule-semantics). The eventual load-time enforcement point for Inv6.
+- [x] Files: NEW `registries.py` + `test_registries.py` + `registries.schema.json` (`spec(§11)`, 8 models); MOD `__init__.py`
+- [x] Cross-doc invariant: NEW (§2.5-seam → schema-snapshot) — orchestrator wrote the registries row + §11/Appendix-A reconcile + Lessons 10–11
+- [x] Depends on: 0.4 (open-registry keys reference these — landed)
+- ✅ **LANDED** `818024d` (feat(contracts), 1 commit). 62 tests green; `mypy --strict` clean. code-quality fixed in-slice (`entry_keys` `@abstractmethod`); security correctly not run (pure structural validator). **🏁 Last §2.5 seam — the contract family is FROZEN** (error/ipc/responses/domain/providers/workers/registries).
 
 ### 0.6 — py↔ts codegen + CI drift gate
 - [ ] pydantic = single source → JSON Schema → generated TS (UI) + Node (worker) types; **CI gate fails on drift** (§4).
@@ -674,3 +705,14 @@ _(Empty at project start; populated as scope cuts surface.)_
 - **Next session target:** 0.4b (IPC completion — REST response bodies + the 4-field str→domain-enum tighten + `GateKind` import + `ipc.schema.json` re-freeze; depends on 0.4a; design signed off via D15/D16). Then 0.5–0.9.
 - **Context cycle:** round closed at orchestrator WARN (71%) on the clean 0.4a boundary (no slice in flight); fresh successors pick up 0.4b from the tracker + `docs/contract-001-errorenvelope-seam-decisions.md`.
 - **Reference:** implementer session doc `docs/sessions/contract-001-2026-06-17-phase-0-frozen-contracts.md`.
+
+### 2026-06-17 — Phase 0 contracts round 2 (0.4b–0.5c): §2.5 contract family FROZEN (D18 checkpoint)
+
+- **Landed:** 0.4b IPC completion (`35f1a2e` SSE str→domain-enum tighten + `GateKind` guard + ipc re-freeze; `7d701a6` `responses.py` 14 REST response bodies + `spec(§4)`); 0.5a provider adapters §7 (`de7caee` — 3 `Protocol` interfaces + ProviderJobRef/PollResult/ProviderUsage/PollStatus, signature-frozen); 0.5b worker contracts §8/§9 (`ccce712` — BlenderJob/Report + ExportJob/`ExportJobReport` + GateMetrics/BBox, scratch-path refs + status↔outputs validator); 0.5c registries §11 (`818024d` — entry envelopes + flexible `RuleSpec` + the pure `validate_registry`). **The §2.5 contract family is FROZEN** (error/ipc/responses/domain/providers/workers/registries), each `spec(§X)`-guarded. 62 contracts tests; `mypy --strict` clean.
+- **Decisions:** **D18** — milestone-checkpoint close-out (seal + push to origin/track/contract; NOT a context cycle, NOT the fork-unblocking merge; same teammates continue to 0.6). Cross-track fork-timing (when the other 6 tracks fork) **DEFERRED to Phase-0 exit / user**. Orchestrator calls this round: 0.5 decomposed → 0.5a/0.5b/0.5c (3 distinct §2.5 seams); `ExportReport` name-collision → §9 worker renamed `ExportJobReport` (domain `ExportReport` untouched); `eligibilityPredicate`→`eligibilityRules` reconcile.
+- **Step-2.5 catches (load-bearing):** the import-direction guard test (0.4b); the worker status↔outputs `model_validator` (0.5b — rule 6 deterministic worker-output validation); `succeeded⟹error-None` on `ExportJobReport` (0.5b flag-3); the `RegistryIssue` membership pin (0.5c).
+- **Lessons banked:** §6–§11 (Test*-pytest collision · interface-seam freeze + open-`params` · cross-seam name collision · worker-report safety shaping · registry envelope/flexible-grammar · pure validator function).
+- **Carry-forward triage (Step 5.5):** 6 items, all SPREAD/KEEP with last-consumer markers (0 deleted / 0 inlined / 0 deferred / 6 kept) — 3 consume at 0.6 (ErrorEnvelope code-tolerance, `Field(title=)`, snapshot-hardening back-port), the rest at 0.8 / 0.9 / Phase-2. Under the ~7 cap.
+- **Finding (tooling, → lead):** `/preflight` Step-1 per-area `uv sync` prunes the shared workspace `dev` group (removes mypy/ruff/pytest); recovered via root `uv sync`. The template should sync from the workspace root (or `--all-packages` / `--group dev`) for the Python areas.
+- **Next session target:** 0.6 (py↔ts codegen + CI drift gate, §4) — same teammates, dispatched right after the push. Then 0.7–0.9, then `/phase-exit 0`.
+- **Reference:** implementer session doc `docs/sessions/contract-002-2026-06-17-contract-family-freeze.md`.

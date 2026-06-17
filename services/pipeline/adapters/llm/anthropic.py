@@ -14,10 +14,11 @@ import httpx
 from aisims_contracts.error import ErrorCode
 from pydantic import BaseModel
 
+from adapters._http import open_client, post_json
 from adapters.errors import ProviderError, build_envelope
 from obs.secrets import SecretsAccessor
 
-from ._base import extract_and_validate, extract_text, open_client, post_json
+from ._base import extract_and_validate, extract_text
 
 DEFAULT_BASE_URL = "https://api.anthropic.com"
 DEFAULT_KEY_NAME = "ANTHROPIC_API_KEY"

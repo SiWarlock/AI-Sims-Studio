@@ -1,0 +1,21 @@
+interactions:
+- request:
+    body: null
+    headers:
+      content-type:
+      - application/json
+    method: GET
+    uri: https://api.wavespeed.ai/api/v3/predictions/job-unknown/result
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"code": 200, "message": "success", "data": {"id": "job-unknown", "model":
+        "wavespeed-ai/flux-2-pro/text-to-image", "status": "queued", "outputs": [],
+        "urls": {"get": "https://api.wavespeed.ai/api/v3/predictions/job-unknown/result"},
+        "error": "", "created_at": "2026-01-01T00:00:00.000Z"}}'
+version: 1

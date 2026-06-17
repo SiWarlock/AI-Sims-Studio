@@ -3,7 +3,7 @@
 - **Date:** 2026-06-17
 - **Phase / track:** Phase 0 (Foundations & frozen contracts) · track `contract` · area `packages/contracts`
 - **Predecessor:** [contract-001](contract-001-2026-06-17-phase-0-frozen-contracts.md) — scaffold + ErrorEnvelope/IPC/domain (0.1–0.4a)
-- **Successor:** TBD — same session continues (D18 checkpoint, not a cycle) into **0.6** (py↔ts codegen + CI drift gate)
+- **Successor:** [contract-003](contract-003-2026-06-17-codegen-drift-gate.md) — py→ts codegen + CI drift gate (0.6)
 
 ## Why this session existed
 Complete the §2.5 frozen-contract family on top of contract-001's error/ipc/domain: finish the IPC

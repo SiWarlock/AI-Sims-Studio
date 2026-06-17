@@ -1,0 +1,1876 @@
+{
+  "DELETE /jobs/{id}": {
+    "additionalProperties": false,
+    "properties": {
+      "cancelled": {
+        "title": "Cancelled",
+        "type": "boolean"
+      },
+      "jobId": {
+        "title": "Jobid",
+        "type": "string"
+      }
+    },
+    "required": [
+      "jobId",
+      "cancelled"
+    ],
+    "title": "CancelJobResponse",
+    "type": "object"
+  },
+  "GET /projects": {
+    "$defs": {
+      "Project": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Createdat"
+          },
+          "desiredItemCount": {
+            "title": "Desireditemcount",
+            "type": "integer"
+          },
+          "exportSettings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Exportsettings"
+          },
+          "generationMode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Generationmode"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outputMode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outputmode"
+          },
+          "planRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Planref"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "runRefs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Runrefs",
+            "type": "array"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/$defs/ProjectState"
+          },
+          "styleNotes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stylenotes"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prompt",
+          "desiredItemCount",
+          "status"
+        ],
+        "title": "Project",
+        "type": "object"
+      },
+      "ProjectState": {
+        "enum": [
+          "created",
+          "planned",
+          "generating",
+          "curating",
+          "validating",
+          "exporting",
+          "exported",
+          "export-failed"
+        ],
+        "title": "ProjectState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "LIST_PROJECTS \u2014 the page of projects + pagination echo (mirrors ListProjectsRequest).",
+    "properties": {
+      "items": {
+        "items": {
+          "$ref": "#/$defs/Project"
+        },
+        "title": "Items",
+        "type": "array"
+      },
+      "limit": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Limit"
+      },
+      "offset": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Offset"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "items",
+      "total"
+    ],
+    "title": "ListProjectsResponse",
+    "type": "object"
+  },
+  "GET/PUT /settings": {
+    "additionalProperties": false,
+    "description": "GET/PUT /settings \u2014 the protocol settings view. Secrets NEVER ride here (safety rule 5).",
+    "properties": {
+      "simsModsPath": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Simsmodspath"
+      },
+      "telemetryEnabled": {
+        "title": "Telemetryenabled",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "telemetryEnabled"
+    ],
+    "title": "SettingsResponse",
+    "type": "object"
+  },
+  "POST /items/{id}/functional": {
+    "$defs": {
+      "ExportMode": {
+        "description": "A FunctionalOverlay's export mode \u2014 the decor/functional/both closed set (\u00a712).",
+        "enum": [
+          "decor",
+          "functional",
+          "both"
+        ],
+        "title": "ExportMode",
+        "type": "string"
+      },
+      "FunctionalOverlay": {
+        "additionalProperties": false,
+        "description": "Behavior on the SAME item identity (Inv 2): sourceItemId is a ref, never a duplicate.",
+        "properties": {
+          "archetype": {
+            "title": "Archetype",
+            "type": "string"
+          },
+          "behaviorSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Behaviorsummary"
+          },
+          "donorRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Donorref"
+          },
+          "exportMode": {
+            "$ref": "#/$defs/ExportMode",
+            "default": "both"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "sourceItemId": {
+            "title": "Sourceitemid",
+            "type": "string"
+          },
+          "sourceVariantId": {
+            "title": "Sourcevariantid",
+            "type": "string"
+          },
+          "userConfig": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Userconfig"
+          },
+          "validationStatus": {
+            "$ref": "#/$defs/OverlayState",
+            "default": "draft"
+          }
+        },
+        "required": [
+          "id",
+          "sourceItemId",
+          "sourceVariantId",
+          "archetype"
+        ],
+        "title": "FunctionalOverlay",
+        "type": "object"
+      },
+      "OverlayState": {
+        "enum": [
+          "draft",
+          "validated",
+          "approved",
+          "invalid"
+        ],
+        "title": "OverlayState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "overlay": {
+        "$ref": "#/$defs/FunctionalOverlay"
+      }
+    },
+    "required": [
+      "overlay"
+    ],
+    "title": "FunctionalResponse",
+    "type": "object"
+  },
+  "POST /items/{id}/include": {
+    "$defs": {
+      "ItemSpec": {
+        "additionalProperties": false,
+        "description": "The stable item identity. archetype/placementCategory are open-registry keys (str).",
+        "properties": {
+          "archetype": {
+            "title": "Archetype",
+            "type": "string"
+          },
+          "conceptPrompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conceptprompt"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "functionalEligibility": {
+            "default": false,
+            "title": "Functionaleligibility",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "include": {
+            "default": true,
+            "title": "Include",
+            "type": "boolean"
+          },
+          "meshContext": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Meshcontext"
+          },
+          "placementCategory": {
+            "title": "Placementcategory",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/$defs/ItemState"
+          },
+          "swatchPlan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Swatchplan"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "archetype",
+          "placementCategory",
+          "status"
+        ],
+        "title": "ItemSpec",
+        "type": "object"
+      },
+      "ItemState": {
+        "description": "13 base states + 6 audit-added (R-d). The contract holds all 19; transitions are Phase-2.",
+        "enum": [
+          "planned",
+          "concept-pending",
+          "concept-generating",
+          "concept-review-needed",
+          "mesh-pending",
+          "mesh-generating",
+          "mesh-qa-pending",
+          "blender-cleanup-pending",
+          "preview-ready",
+          "needs-review",
+          "export-ready",
+          "failed",
+          "excluded",
+          "skipped",
+          "unsupported",
+          "cancelled",
+          "test-installed",
+          "in-game-verified",
+          "in-game-failed"
+        ],
+        "title": "ItemState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "item": {
+        "$ref": "#/$defs/ItemSpec"
+      }
+    },
+    "required": [
+      "item"
+    ],
+    "title": "IncludeItemResponse",
+    "type": "object"
+  },
+  "POST /items/{id}/regenerate": {
+    "$defs": {
+      "PipelineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Endedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemid"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "runType": {
+            "title": "Runtype",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/$defs/StepState"
+          },
+          "stepIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stepids",
+            "type": "array"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "runType",
+          "status"
+        ],
+        "title": "PipelineRun",
+        "type": "object"
+      },
+      "StepState": {
+        "description": "The 8-state Run/Step machine (PipelineRun.status + Step.state share it).",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "waiting-for-user",
+          "cancelled",
+          "retrying",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "REGENERATE \u2014 async job started; the regenerated candidate streams via SSE.",
+    "properties": {
+      "run": {
+        "$ref": "#/$defs/PipelineRun"
+      }
+    },
+    "required": [
+      "run"
+    ],
+    "title": "RegenerateResponse",
+    "type": "object"
+  },
+  "POST /projects": {
+    "$defs": {
+      "Project": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Createdat"
+          },
+          "desiredItemCount": {
+            "title": "Desireditemcount",
+            "type": "integer"
+          },
+          "exportSettings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Exportsettings"
+          },
+          "generationMode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Generationmode"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outputMode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outputmode"
+          },
+          "planRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Planref"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "runRefs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Runrefs",
+            "type": "array"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/$defs/ProjectState"
+          },
+          "styleNotes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Stylenotes"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prompt",
+          "desiredItemCount",
+          "status"
+        ],
+        "title": "Project",
+        "type": "object"
+      },
+      "ProjectState": {
+        "enum": [
+          "created",
+          "planned",
+          "generating",
+          "curating",
+          "validating",
+          "exporting",
+          "exported",
+          "export-failed"
+        ],
+        "title": "ProjectState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "project": {
+        "$ref": "#/$defs/Project"
+      }
+    },
+    "required": [
+      "project"
+    ],
+    "title": "CreateProjectResponse",
+    "type": "object"
+  },
+  "POST /projects/{id}/export": {
+    "$defs": {
+      "ExportArtifact": {
+        "additionalProperties": false,
+        "properties": {
+          "buildStatus": {
+            "$ref": "#/$defs/ExportState",
+            "default": "building"
+          },
+          "functionalOverlays": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Functionaloverlays",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "includedItems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Includeditems",
+            "type": "array"
+          },
+          "outputPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outputpath"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ExportReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "projectId"
+        ],
+        "title": "ExportArtifact",
+        "type": "object"
+      },
+      "ExportReport": {
+        "additionalProperties": false,
+        "description": "Human-readable export summary (embedded 1-1 under ExportArtifact).",
+        "properties": {
+          "artifactPaths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifactpaths",
+            "type": "array"
+          },
+          "excludedItems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Excludeditems",
+            "type": "array"
+          },
+          "functionalItems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Functionalitems",
+            "type": "array"
+          },
+          "includedItems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Includeditems",
+            "type": "array"
+          },
+          "projectName": {
+            "title": "Projectname",
+            "type": "string"
+          },
+          "runRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Runref"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "validationSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Validationsummary"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "projectName",
+          "timestamp"
+        ],
+        "title": "ExportReport",
+        "type": "object"
+      },
+      "ExportState": {
+        "enum": [
+          "building",
+          "success",
+          "success-with-warnings",
+          "partial",
+          "failed",
+          "cancelled"
+        ],
+        "title": "ExportState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "EXPORT \u2014 the export artifact handle (embeds the ExportReport summary).",
+    "properties": {
+      "artifact": {
+        "$ref": "#/$defs/ExportArtifact"
+      }
+    },
+    "required": [
+      "artifact"
+    ],
+    "title": "ExportResponse",
+    "type": "object"
+  },
+  "POST /projects/{id}/runs": {
+    "$defs": {
+      "PipelineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Endedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemid"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "runType": {
+            "title": "Runtype",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/$defs/StepState"
+          },
+          "stepIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stepids",
+            "type": "array"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "runType",
+          "status"
+        ],
+        "title": "PipelineRun",
+        "type": "object"
+      },
+      "StepState": {
+        "description": "The 8-state Run/Step machine (PipelineRun.status + Step.state share it).",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "waiting-for-user",
+          "cancelled",
+          "retrying",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "START_OR_RESUME_RUN \u2014 returns the run that was started/resumed; candidates stream via SSE.",
+    "properties": {
+      "run": {
+        "$ref": "#/$defs/PipelineRun"
+      }
+    },
+    "required": [
+      "run"
+    ],
+    "title": "RunResponse",
+    "type": "object"
+  },
+  "POST /projects/{id}/test-install": {
+    "$defs": {
+      "PipelineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Endedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemid"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "runType": {
+            "title": "Runtype",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/$defs/StepState"
+          },
+          "stepIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stepids",
+            "type": "array"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "runType",
+          "status"
+        ],
+        "title": "PipelineRun",
+        "type": "object"
+      },
+      "StepState": {
+        "description": "The 8-state Run/Step machine (PipelineRun.status + Step.state share it).",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "waiting-for-user",
+          "cancelled",
+          "retrying",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "TEST_INSTALL \u2014 async run; the install result streams via SSE.",
+    "properties": {
+      "run": {
+        "$ref": "#/$defs/PipelineRun"
+      }
+    },
+    "required": [
+      "run"
+    ],
+    "title": "TestInstallResponse",
+    "type": "object"
+  },
+  "POST /projects/{id}/validate": {
+    "$defs": {
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "Severity": {
+        "description": "ValidationResult severity (\u00a717 \u2283 the IPC ValidationEvent severity, tightened in 0.4b).",
+        "enum": [
+          "error",
+          "warn",
+          "info",
+          "pass"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "ValidationResult": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorEnvelope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "relatedRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Relatedref"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/$defs/ValidationScope"
+          },
+          "severity": {
+            "$ref": "#/$defs/Severity"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "severity",
+          "message"
+        ],
+        "title": "ValidationResult",
+        "type": "object"
+      },
+      "ValidationScope": {
+        "enum": [
+          "project",
+          "item",
+          "mesh",
+          "overlay",
+          "export"
+        ],
+        "title": "ValidationScope",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "results": {
+        "items": {
+          "$ref": "#/$defs/ValidationResult"
+        },
+        "title": "Results",
+        "type": "array"
+      }
+    },
+    "required": [
+      "results"
+    ],
+    "title": "ValidateResponse",
+    "type": "object"
+  },
+  "POST /runs/{id}/gate": {
+    "$defs": {
+      "PipelineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Endedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Itemid"
+          },
+          "projectId": {
+            "title": "Projectid",
+            "type": "string"
+          },
+          "runType": {
+            "title": "Runtype",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Startedat"
+          },
+          "status": {
+            "$ref": "#/$defs/StepState"
+          },
+          "stepIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Stepids",
+            "type": "array"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "runType",
+          "status"
+        ],
+        "title": "PipelineRun",
+        "type": "object"
+      },
+      "StepState": {
+        "description": "The 8-state Run/Step machine (PipelineRun.status + Step.state share it).",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "waiting-for-user",
+          "cancelled",
+          "retrying",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "GATE \u2014 returns the advanced run state after the gate decision is applied.",
+    "properties": {
+      "run": {
+        "$ref": "#/$defs/PipelineRun"
+      }
+    },
+    "required": [
+      "run"
+    ],
+    "title": "GateResponse",
+    "type": "object"
+  },
+  "POST /settings/providers/{p}/test": {
+    "$defs": {
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "TEST_PROVIDER \u2014 connectivity probe; ``error`` carries the 0.2 ErrorEnvelope on failure.",
+    "properties": {
+      "error": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ErrorEnvelope"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "latencyMs": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Latencyms"
+      },
+      "ok": {
+        "title": "Ok",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok"
+    ],
+    "title": "TestProviderResponse",
+    "type": "object"
+  },
+  "POST /steps/{id}/rerun": {
+    "$defs": {
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "Step": {
+        "additionalProperties": false,
+        "properties": {
+          "artifactRefs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Artifactrefs",
+            "type": "array"
+          },
+          "attempts": {
+            "default": 0,
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "costCents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Costcents"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ErrorEnvelope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Inputs"
+          },
+          "latencyMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latencyms"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "runId": {
+            "title": "Runid",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "default": 1,
+            "title": "Schemaversion",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/$defs/StepState"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "name",
+          "state"
+        ],
+        "title": "Step",
+        "type": "object"
+      },
+      "StepState": {
+        "description": "The 8-state Run/Step machine (PipelineRun.status + Step.state share it).",
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "waiting-for-user",
+          "cancelled",
+          "retrying",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "step": {
+        "$ref": "#/$defs/Step"
+      }
+    },
+    "required": [
+      "step"
+    ],
+    "title": "RerunStepResponse",
+    "type": "object"
+  }
+}

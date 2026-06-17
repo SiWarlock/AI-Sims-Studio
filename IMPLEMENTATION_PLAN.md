@@ -25,35 +25,42 @@
 
 ## Currently in progress
 
-**Phase 0 — contract track (10 slices landed: 0.1–0.7). 🏁 §2.5 CONTRACTS FROZEN + codegen live + store skeleton up.**
-Rounds 1–3 **SEALED + PUSHED**: round 1 (0.1–0.4a) `d1aa05b`; round 2 (0.4b–0.5c, the §2.5 family) `0f78259`; round 3
-(0.6 codegen + CI drift gate + the 2 `/preflight` tooling fixes) `18195d6`. **Round 4 (unpushed):** 0.7 (Postgres store
-skeleton, §13) **LANDED** — C1 `379df6f` (repo layer + SQLAlchemy 2.0 async + Alembic + hybrid JSONB persistence +
-version stamp/compat check) + C2 `c500df9` (write-bytes→fsync→commit-row) + C3 `19b1edb` (**SAFETY rule-3 sole-writer
-pin**, security-reviewer CLEAR). 18 tests green; `mypy --strict` (23 files) clean. **First `services/pipeline`-area slice**
-— a fresh `contract-pipeline-implementer` took it (implementer cycle at the 0.6 boundary; orchestrator persisted).
-**Orchestrator round-4 docs accumulating uncommitted** (this reconcile + brief `contract-009` + the §13 store arch-note
-+ the area lookup row + `services/pipeline` Lessons §1–3 + the PG-CI carry-forward fold) for the next `/orchestrate-end`.
+**🏁 PHASE 0 COMPLETE + SEALED (0.1–0.9) — the contract track's mission is done.** Every §2.5 shared contract is
+frozen (error/ipc/responses/domain/providers/workers/registries), py↔ts codegen + CI drift gate live, the Postgres
+store skeleton is up, the mock-adapter framework + deterministic failure injection are in place, and the supervisor +
+fail-open tracing + the rule-5 redaction chokepoint landed. Round seals on `origin/track/contract`: r1 `d1aa05b`,
+r2 `0f78259`, r3 `18195d6`, r4 `51a5d41`; **r5 (this round) = 0.8 (`986d975`/`e2b73b6`) + 0.9 (`704ef57`/`e8fe397`/
+`07dbd9f`) + this docs seal** — all pushed.
 
-**Next session target:** `0.8` (Mock-adapter framework + failure injection) — depends on 0.5 (provider/worker contracts)
-+ 0.2 (ErrorEnvelope), both landed. Mock impls behind every provider/worker interface + deterministic failure-injection
-spanning the `ErrorEnvelope` taxonomy. `services/pipeline/adapters/mock/*`. Then 0.9 (supervisor/obs — carries the
-PINNED ErrorEnvelope-redaction safety item), then `/phase-exit 0`. ⏳ **PENDING at Phase-0 exit:** P4 (6-track
-fork-timing — the push is a checkpoint, NOT fork-unblocking) + the deferred holistic CI (D20, incl. the store PG-in-CI
-job) + the **`py.typed` Finding** (contracts packaging — awaiting lead ruling) return to the lead/user. Also held: the
-0.5b **snapshot-hardening micro-slice** (needs a `packages/contracts` implementer). Inv1 (exportability gate) + Inv5
-(ordered gates) remain PINNED non-droppable **Phase-2** safety items (D16). (0.5 → 0.5a/0.5b/0.5c.)
+**`/phase-exit 0` verdict: CLEAR** (all rows clean or user-waived). arch-drift 0-drift (8/8 §2.5 snapshots green);
+reachability CLEAR (contracts + pipeline); preflight green (pipeline 60 tests / `mypy` 43 files, contracts 70 / 19);
+dependency audit — no known vulnerabilities; per-slice security CLEAR (0.7 sole-writer, 0.9 redaction). Spec-coverage:
+11 anchors tagged + §2.5/§21/§3 **user-waived** (2026-06-17). Audit reports: `docs/audits/phase-0-*.md`. The `py.typed`
+Finding is **CLOSED** (resolved by D24 `14ec0ce`; the pipeline `follow_untyped_imports` stopgap was already removed).
+
+**Next:** the **6-track fork (P4)** — Phase 0 froze the shared contracts, so spikes / core / providers /
+mesh-export-functional / ui / obs-evals can now fork off `origin/track/contract` (lead + user coordinating). **The
+contract team winds down.** Deferred to a next-phase **infra** round (D20, user-approved): holistic per-area CI + a PG
+service for 0.7's env-gated store integration test + wiring `pip-audit` into the dev env. Inv1 (exportability gate) +
+Inv5 (ordered gates) remain PINNED non-droppable **Phase-2** safety items (D16). Open contracts micro-slice (not
+Phase-0-blocking): the 0.5b snapshot-hardening back-port (needs a `packages/contracts` implementer).
 
 ---
 
 ## Carry-forward to upcoming briefs
 
-- **ErrorEnvelope `code` consumer-tolerance (origin: 2026-06-17 · 0.2 / D10b).** UI SSE/IPC deserialization + the 0.6 TS codegen type MUST degrade gracefully on an unrecognized `code` → map to `SYSTEM`, so a future additive enum split (e.g. `PROVIDER_AUTH` + `PROVIDER_QUOTA`) is non-breaking. The 0.2 producer model stays a STRICT closed enum (RED #4 + `extra="forbid"`); tolerance lives in CONSUMERS. **0.6 codegen part DONE** (`parseErrorCode(x)→SYSTEM` helper emitted in `generated/helpers.ts`, Lesson 13); **remaining: Phase-7 UI Zod-boundary wiring** (the UI calls `parseErrorCode` at deserialization). **Last-consumer-slice: Phase 7.** Strict model + tolerant consumers = the production-grade combo.
-- **⚠ SAFETY-TRACKED (rule 5, non-droppable) — ErrorEnvelope redaction-egress (origin: 2026-06-17 · 0.2).** `creatorMessage` + `maintainerDetail` are free-text PII/secret-bearing egress surfaces — the §16 redaction chokepoint / §14 tracing MUST scrub them before any logs/traces/SSE egress. Marked at the model via inline code comment + anchored in `ARCHITECTURE.md §17`. **Encoded as a PINNED, non-waivable acceptance bullet in task 0.9** (the obs/redaction seam) — the redaction impl cannot ship without a test covering both fields. **Last-consumer-slice: 0.9.**
-- **`GateKind` import-DAG / relocation (origin: 2026-06-17 · 0.4b / Q5 / D15).** 0.4b made the `ipc → domain` import edge live (the 4 SSE fields tightened to domain enums). `GateKind` stays single-homed in `ipc.py` (no domain consumer yet; guarded by `test_gatekind_single_definition`). When a **Phase-2 domain gate model** needs `GateKind`, importing it from `ipc` would close an `ipc ↔ domain` cycle → **relocate `GateKind` to `domain.py` (or a neutral shared-enums module) then**, never import upward. `test_import_direction` mechanically pins the acyclic DAG (`error←domain←ipc←responses`), so the cycle can't land silently. **Last-consumer-slice: Phase-2 (the slice that adds a domain gate model).** (Lesson 5/6.)
-- **`StructuredT` TypeVar package-export (origin: 2026-06-17 · 0.5a).** `LLMProvider.structured`'s `StructuredT` (TypeVar bound=BaseModel) is importable from `aisims_contracts.providers` but is NOT in the package `__all__`. Decide package-level export when **0.8** mock adapters implement `LLMProvider.structured` (an adapter conforming to the Protocol doesn't strictly need it exported). **Last-consumer-slice: 0.8.**
-- **Snapshot-test hardening back-port (origin: 2026-06-17 · 0.5b).** 0.5b added two guards worth back-porting: (1) `min_length=1` on path/ref `str` fields (an empty-string ref passes a None-check but isn't a usable path — applies to providers `urls`/refs + domain path fields `imagePath`/`meshPath`/`outputPath`/… + registry `id`/`key`/`name`, 0.5c); (2) the explicit value-model-SET assertion in the snapshot test (`set(models)==expected` — catches a silently-dropped model before a blind regen). Apply to `test_providers.py` + `test_domain.py` (+ registries) in a hardening pass. **OWN dedicated micro-slice** — NOT folded into 0.6 (impl's bisectability call: (1) is a *contract* change that re-freezes 3 frozen snapshots; mixing it into a tooling slice muddies bisectability). Schedule as a standalone slice (before/with 0.7). **Last-consumer-slice: own slice (TBD).**
-- **Deferred holistic CI build-out (origin: 2026-06-17 · 0.6 / D20).** 0.6 lands ONLY the minimal GitHub Actions contracts-drift job (`codegen --check` + pytest). The full CI — **per-area lint/type/test jobs for all 6 areas** (apps/desktop · services/pipeline · workers/blender · workers/export · packages/contracts · evals; root `uv sync --all-packages` per D19) — is DEFERRED to a **Phase-0-exit or dedicated infra slice**; pairs with **P4** (the 6-track fork-timing) as Phase-0-exit infra. The **services/pipeline job additionally needs a PG service** to run 0.7's store PG-integration test (the `AISIMS_TEST_DATABASE_URL`-gated round-trip — sqlite covers the unit logic but NOT PG-specifics like JSONB ops/pgvector; origin 0.7). **Last-consumer-slice: Phase-0-exit (infra).**
+> **Phase-0 seal triage (2026-06-17):** the contract track is done — these are cross-track handoffs for the forking
+> tracks + a next-phase infra round (each carries origin + target phase). **2 DELETED at seal:** ErrorEnvelope
+> redaction-egress (LANDED in 0.9 `e8fe397`, PINNED both-fields test) · `StructuredT` package-export (RESOLVED in 0.8
+> — mock `structured` uses its own PEP-695 `[T: BaseModel]`, no export needed).
+
+- **ErrorEnvelope `code` consumer-tolerance (origin: 2026-06-17 · 0.2 / D10b).** UI SSE/IPC deserialization maps an unrecognized `code` → `SYSTEM` so a future additive enum split is non-breaking; the 0.6 `parseErrorCode(x)→SYSTEM` helper (`generated/helpers.ts`, Lesson 13) exists. **Remaining: Phase-7 UI Zod-boundary wiring. Last-consumer-slice: Phase 7.**
+- **`GateKind` import-DAG relocation (origin: 2026-06-17 · 0.4b / D15).** When a **Phase-2 domain gate model** needs `GateKind`, relocate it `ipc.py`→`domain.py` (or a neutral shared-enums module) to avoid an `ipc↔domain` cycle; `test_import_direction` pins the acyclic DAG so a cycle can't land silently. **Last-consumer-slice: Phase 2.**
+- **Phase-2 obs/engine wiring (origin: 0.8 / 0.9).** (a) Hoist `ProviderError` from `adapters/mock/failure.py` to a neutral `adapters/errors.py` when a Phase-2 engine path catches it (so the engine never imports a mock module). (b) Wire `pick_free_port` into the supervisor-boot path + add its trivial test (the phase-exit reachability note — currently test-unreached, documented Phase-2 caller). **Last-consumer-slice: Phase 2.**
+- **Mock/adapter forward items (origin: 0.8).** FETCH-time failure injection (extend `MockOp`) if a Phase-2 pipeline test needs it (no contract error channel on `fetch` today); the §16 provider-output-validation (bytes-cap / magic-byte / path-sanitize) lands in the **Phase-3** real adapters — the mock `fetch` basename/scratch-guard is the analogue. **Last-consumer-slice: Phase 2 / Phase 3.**
+- **Phase-8 tracing hardening (origin: 0.9).** Bound the export queue + the in-flight export threads (drop-on-full) — Phase 0 ships an unbounded fail-open queue (never blocks a run, but unbounded under sustained exporter hang); + real LangSmith config. **Last-consumer-slice: Phase 8.**
+- **Snapshot-test hardening back-port (origin: 2026-06-17 · 0.5b).** `min_length=1` on contracts path/ref/key `str` fields + the explicit value-model-SET assertion in the snapshot tests (`set(models)==expected`); re-freezes 3 snapshots → its **own `packages/contracts` micro-slice** (needs a contracts implementer; not Phase-0-blocking). **Last-consumer-slice: own slice (TBD).**
+- **Holistic CI build-out (origin: 2026-06-17 · 0.6 / D20).** Per-area lint/type/test for all 6 areas (root `uv sync --all-packages`, D19) + a **PG service** for 0.7's `AISIMS_TEST_DATABASE_URL`-gated store integration test (sqlite covers unit logic, not JSONB/pgvector) + wire **`pip-audit`** into the dev env (not installed; Phase-0 exit ran it ephemerally). **Next-phase infra slice (user-deferred at Phase-0 exit). Last-consumer-slice: next-phase infra.**
 
 ---
 
@@ -63,7 +70,7 @@ job) + the **`py.typed` Finding** (contracts packaging — awaiting lead ruling)
 
 | Deliverable | Status | Delivered by |
 |---|---|---|
-| Frozen contracts package (IPC, domain, provider, worker, registry, ErrorEnvelope) + py↔ts codegen | ❌ | Phase 0 |
+| Frozen contracts package (IPC, domain, provider, worker, registry, ErrorEnvelope) + py↔ts codegen | ✅ | Phase 0 |
 | Spike verdicts S1 (GEOM/export go/no-go) · S2 (3D bakeoff) · S3 (tuning-clone) | ❌ | Phase 1 |
 | Resumable pipeline core (LangGraph + Postgres + engine + reconciler) on mocks | ❌ | Phase 2 |
 | Real provider adapters (image-gen, image-to-3D, LLM) + bakeoffs | ❌ | Phase 3 |
@@ -193,7 +200,7 @@ task's RED outline must include a **schema-snapshot test**.
 **Goal:** Stand up the monorepo + freeze every shared contract (the §2.5 seams) so tracks can fork without
 drift. No business logic — just the contracts, codegen, store skeleton, mock framework, and supervisor stubs.
 
-**Spec anchors:** `ARCHITECTURE.md §2.5`, §4, §6, §7, §8, §9, §11, §12, §13, §16 (token boundary 0.3 + redaction 0.9), §17, §21, §3 (shell skeleton), §14 (seam).
+**Spec anchors:** `ARCHITECTURE.md` §2.5 (covered-by: union of the eight per-seam schema-snapshot tests, all green), §4, §6, §7, §8, §9, §11, §12, §13, §16 (token boundary 0.3 + redaction 0.9), §17, §21 (non-TDD: numeric cost/budgets are a deliberate architecture deferral; no Phase-0 impl), §3 (non-TDD: UI shell skeleton is the apps/desktop track, not contract), §14 (seam).
 
 **Track:** contract · **Depends on (phases):** none.
 
@@ -284,22 +291,22 @@ drift. No business logic — just the contracts, codegen, store skeleton, mock f
 - [x] Depends on: 0.4 (landed)
 - ✅ **LANDED** C1 `379df6f` (store skeleton + repo + Alembic + versioning) + C2 `c500df9` (write-ordering) + C3 `19b1edb` (**SAFETY rule-3 sole-writer pin**, security-reviewer CLEAR). 18 tests green; `mypy --strict` (23 files) clean; sqlite+aiosqlite unit layer + env-gated PG test. Reviewers fixed in-slice (security [HIGH] path-traversal guard; code-quality [HIGH]×2 env.py models-import + engine-disposal). **Finding → lead:** contracts missing `py.typed` (cross-area; stopgap applied).
 
-### 0.8 — Mock-adapter framework + failure injection
-- [ ] Mock impls behind every provider/worker interface (PIPE-002); deterministic **failure-injection mode** spanning the `ErrorEnvelope` taxonomy (REQ-T-101).
-- [ ] Files: NEW `services/pipeline/adapters/mock/*`
-- [ ] Cross-doc invariant: none
-- [ ] Depends on: 0.5, 0.2
+### 0.8 — Mock-adapter framework + failure injection  *(LANDED — C1 `986d975` · C2 `e2b73b6`)*
+- [x] Mock impls behind every provider/worker interface (PIPE-002); deterministic **failure-injection mode** spanning the `ErrorEnvelope` taxonomy (REQ-T-101). Mocks behind all 3 §7 Protocols + §8/§9 workers; seeded-deterministic `FailurePlan`/`MockOp` injection over all 13 `ErrorCode`s; sync-vs-async error-channel (raise `ProviderError` vs `PollResult.error`); constructors + factory seam (no self-registration). 44 tests; both reviewers PASS.
+- [x] Files: NEW `services/pipeline/adapters/mock/{__init__,failure,providers,workers}.py` + `tests/adapters/*`
+- [x] Cross-doc invariant: none (consumes frozen contracts; 0.5a `StructuredT`-export carry-forward CLOSED — mock `structured` uses its own PEP-695 `[T: BaseModel]`)
+- [x] Depends on: 0.5, 0.2 (landed)
 
-### 0.9 — Supervisor + observability seam (skeletons)
-- [ ] Supervisor: free-port pick, spawn + `/health` + restart-with-backoff + process-tree teardown for Postgres/sidecar/Blender/@s4tk (§6, REQ-O-103). Single-writer lock w/ PID+heartbeat.
-- [ ] Thin tracing seam → LangSmith, **fail-open** (background queue + export timeout + drop-on-timeout) (§14); redaction chokepoint (secrets accessor never enters State/logs) (§16).
-- [ ] **[SAFETY-RULE-5 · PINNED · NON-DROPPABLE]** Redaction chokepoint MUST scrub `ErrorEnvelope.creatorMessage` + `maintainerDetail` (free-text PII/secret-bearing egress surfaces) before ANY egress (logs/traces/SSE) — **pin:** a redaction test asserting both fields are scrubbed; this acceptance bullet cannot be waived. (origin 0.2; §16/§17 redaction-required marker.)
-- [ ] Files: NEW `services/pipeline/engine/supervisor.py`, `services/pipeline/obs/*`
-- [ ] Cross-doc invariant: none
-- [ ] Depends on: 0.1
+### 0.9 — Supervisor + observability seam (skeletons)  *(LANDED — C1 `704ef57` · C2 `e8fe397` SAFETY · C3 `07dbd9f`)*
+- [x] Supervisor: free-port pick, spawn + `/health` + restart-with-backoff + process-tree teardown for Postgres/sidecar/Blender/@s4tk (§6, REQ-O-103). Single-writer lock w/ PID+heartbeat — **live owner always holds; reclaim gated on a DEAD PID only** (heartbeat = metadata; atomic-acquire + fencing → Phase 2).
+- [x] Thin tracing seam → LangSmith, **fail-open** (background queue + export timeout + drop-on-timeout) (§14); redaction chokepoint (secrets accessor never enters State/logs) (§16).
+- [x] **[SAFETY-RULE-5 · PINNED · NON-DROPPABLE]** Redaction chokepoint MUST scrub `ErrorEnvelope.creatorMessage` + `maintainerDetail` (free-text PII/secret-bearing egress surfaces) before ANY egress (logs/traces/SSE) — **pin:** a redaction test asserting both fields are scrubbed; this acceptance bullet cannot be waived. (origin 0.2; §16/§17 redaction-required marker.) **LANDED in C2 `e8fe397` (standalone), security-reviewer CLEAR; both-fields + `suggestedAction` defense-in-depth, fail-closed, recursive span.**
+- [x] Files: NEW `services/pipeline/engine/{supervisor,lock}.py`, `services/pipeline/obs/{secrets,redaction,tracing}.py` + `tests/{engine,obs}/*`
+- [x] Cross-doc invariant: none
+- [x] Depends on: 0.1
 
 ### Acceptance criteria (0)
-- [ ] All 0.X ticked. Contracts compile in py + generated TS; CI drift gate green. Mock framework runs a no-op flow. Postgres skeleton migrates + opens with version stamp. Schema-snapshot tests exist for every §2.5-seam model.
+- [x] All 0.X ticked. Contracts compile in py + generated TS; CI drift gate green. Mock framework runs (standalone; the full graph no-op flow needs the Phase-2 engine). Postgres skeleton migrates + opens with version stamp. Schema-snapshot tests exist for every §2.5-seam model. *(Sole forward-item: the 0.2 SSE/`Step.error` runtime-EMIT bullet — contract defined; emit sites land in Phase 2.)* **`/phase-exit 0` verdict: CLEAR (2026-06-17) — all rows clean or user-waived; reports in `docs/audits/phase-0-*.md`.**
 
 ---
 
@@ -739,3 +746,13 @@ _(Empty at project start; populated as scope cuts surface.)_
 - **🔁 ORCHESTRATOR CYCLE:** the orchestrator hit WARN (72%) at the clean 0.7→0.8 boundary (0.7 routed, D24 done, 0.8 not started). Round 4 sealed + **pushed** (D18-style checkpoint). A fresh **`contract-pipeline-orchestrator`** succeeds and **dispatches 0.8 as its first action** (baked into its spawn prompt — avoids a dispatch-gap stall). The `contract-pipeline-implementer` (idle, waiting on 0.8) **PERSISTS**. (Lineage: the contracts implementer cycled at the 0.6 boundary; this contracts orchestrator was itself a round-1 successor.)
 - **Next session target:** 0.8 (Mock-adapter framework + failure injection, `services/pipeline/adapters/mock/*`) — the successor authors the brief (`contract-010`) + dispatches to the persisting pipeline impl. Then 0.9 (supervisor/obs — the PINNED ErrorEnvelope-redaction safety item), then `/phase-exit 0` (P4 + holistic-CI + the snapshot-hardening micro-slice resolve there).
 - **Reference:** no separate orchestrator session doc (this Log + "Currently in progress" carry the handoff); 0.7 impl detail rides the commits + the pipeline impl's future session doc.
+
+### 2026-06-17 — Phase 0 contracts round 5 (0.8 + 0.9): mock framework + supervisor/obs/redaction — 🏁 PHASE 0 SEALED
+
+- **Landed:** 0.8 mock-adapter framework — C1 `986d975` (mock providers + the seeded `FailurePlan`/`MockOp` failure-injection core over all 13 `ErrorCode`s) + C2 `e2b73b6` (mock §8/§9 workers + scratch-only conformance + factory seam). 0.9 supervisor/obs/redaction — C1 `704ef57` (supervisor + single-writer lock) + C2 `e8fe397` (**rule-5 redaction chokepoint + secrets accessor**, standalone, security-reviewer CLEAR) + C3 `07dbd9f` (fail-open tracing). At phase-exit: pipeline 60 tests / `mypy --strict` 43 files; contracts 70 / 19; all green.
+- **`/phase-exit 0`: CLEAR** — arch-drift 0-drift (8/8 §2.5 schema snapshots); reachability CLEAR (contracts + pipeline; one minor `pick_free_port` test-gap → carry-forward); preflight green; dependency audit no known vulnerabilities; per-slice security CLEAR (0.7 sole-writer, 0.9 redaction). Spec-coverage: 11 anchors tagged + §2.5/§21/§3 **user-waived**. Reports: `docs/audits/phase-0-*.md`.
+- **Decisions / closures (user, at exit):** 3 spec-coverage waivers APPROVED (§2.5 = union of the 8 snapshots; §21 = deliberate numeric-budget deferral; §3 = apps/desktop track). **py.typed Finding CLOSED** — D24 `14ec0ce` resolved it; the pipeline `follow_untyped_imports` stopgap was already removed in round 4 (verified absent). Holistic CI + a PG service for 0.7's integration test + wiring `pip-audit` → **DEFERRED** to a next-phase infra round (D20). Step-2.5 catches this round: 0.8 worker-FAILED injection coverage (ADD); 0.9 single-writer-lock reclaim tightened to **dead-PID-only** (TWEAK — a live owner always holds; no double-writer reclaim without fencing).
+- **Lessons banked:** `services/pipeline` §4–§8 (seeded deterministic mocks · sync-vs-async error-channel · fail-open tracing vs fail-closed redaction · secrets-accessor chokepoint · single-writer-lock dead-PID reclaim).
+- **Carry-forward triage (Step 5.5):** 2 DELETED (redaction-egress → landed 0.9 `e8fe397`; StructuredT-export → resolved 0.8), 5 ADDED/consolidated as cross-track handoffs (Phase-2 GateKind + obs/engine wiring; Phase-2/3 mock + provider-output-validation; Phase-8 tracing bounding), 2 KEPT (Phase-7 ErrorCode-tolerance; contracts snapshot-hardening micro-slice); holistic-CI re-marked next-phase infra. 7 items — a deliberate phase-boundary handoff list for the forking tracks.
+- **🏁 PHASE 0 SEALED + PUSHED** to `origin/track/contract`: round 5 = 0.8 + 0.9 slice commits + impl session doc `5ddff0b` (contract-004) + this docs-seal commit. **Next: the 6-track fork (P4)** — lead + user coordinating; the **contract team winds down**, its mission (freeze the §2.5 seams + the Phase-0 skeletons) complete.
+- **Reference:** implementer session doc `docs/sessions/contract-004-2026-06-17-services-pipeline-phase0-tail.md`; phase-exit audits `docs/audits/phase-0-{arch-drift,reachability-pipeline,reachability-contracts}.md`.

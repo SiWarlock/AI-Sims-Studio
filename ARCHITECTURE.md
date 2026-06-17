@@ -165,6 +165,14 @@ reclaimable on reopen. **Supervisor** (REQ-O-103): free-port pick, spawn + `/hea
 restart-with-backoff + **process-tree teardown** for Postgres, Python sidecar, Blender, @s4tk; no orphan
 ports/processes.
 
+**Supervisor + single-writer lock (0.9 skeleton — `engine/supervisor.py`, `engine/lock.py`).** The supervisor does
+free-port pick → `spawn` → health-poll (a running-predicate in Phase 0; real HTTP `/health` Phase 2) → capped
+deterministic **restart-with-backoff** → **process-tree teardown** (`start_new_session` + `killpg`; no orphan
+child/grandchild/port). The **single-writer lock** is on-disk, carrying owner-PID + heartbeat/ttl: a **live owner
+always holds**; reclaim is gated on a **dead owner PID only** (heartbeat/ttl ride as metadata for Phase-2 PID-reuse
+disambiguation + fencing, *not* consulted by the reclaim gate — so a GC pause / swap can't trigger a double-writer
+reclaim). `release()` is idempotent. Atomic-acquire (close the acquire TOCTOU) + a fencing token are Phase-2.
+
 ## §7 — Provider adapters  *(frozen contract)*
 Three interfaces, mock+real behind each (PIPE-002/003), model-agnostic + **bakeoff** (no model lock-in):
 - `Image3DProvider`: `submit(image,params)→ProviderJobRef · poll(ref)→{status∈PollStatus,progress,urls?} ·
@@ -181,6 +189,17 @@ promptly; happy-path expiry race → re-submit; reconcile → re-download if not
 **cost+latency** (latency MUST be recorded for every cloud op; cost SHOULD, with a per-model price-table
 estimate fallback from §21 config). **Provider-output validation (§16):** max-bytes streaming cap +
 magic-byte/content-type check + path sanitization before persisting/feeding Blender.
+
+**Mock framework (0.8 — `services/pipeline/adapters/mock/`).** A mock implements each of the three Protocols
+(exposed as constructors + a thin factory helper; **no global self-registration** — provider *selection* is Phase-2
+via the registry seam §11, the load-time validator is 0.5c). Mocks are **seeded-deterministic** (every output a pure
+function of `(seed, call-seq)`; **no wall-clock** — fixed epoch + offset, `expiresAt = submittedAt + 24h`). The async
+lifecycle polls `SUBMITTED→RUNNING→SUCCEEDED` (default `succeed_after_polls=3`, so both non-terminal states are
+poll-observable for a Phase-2 resume); `usage.latencyMs` is always set. `fetch()` writes placeholder bytes **only**
+under the sidecar-provided scratch dir and returns sanitized, scratch-guarded basenames (rule 3). Deterministic
+**failure injection** (`FailurePlan` / `FailureRule` over a `MockOp` set {POLL, COMPLETE, STRUCTURED, BLENDER_RUN,
+EXPORT_RUN}; SUBMIT/FETCH have no contract error channel, so a submit-class failure surfaces at first poll) spans the
+full §17 taxonomy — see §17.
 
 ## §8 — Mesh / Blender subsystem  *(frozen `BlenderJob` worker contract)*
 **Blender 5.1.x + Python 3.13, Apple-Silicon**, invoked as a **CLI subprocess** (`blender --background
@@ -273,6 +292,13 @@ trace-loss counter is surfaced in the dev panel. **Egress:** only traces/metadat
 Trace summaries + ReviewEvents live in Postgres (§12); LangSmith is the derived mirror. Privacy disclosure +
 opt-out in Onboarding/Settings (§18).
 
+**Fail-open tracing seam (0.9 skeleton — `obs/tracing.py`).** A background export queue + worker; each export runs in
+a fresh daemon thread with `join(timeout)` so one hung export can't clog the next. `emit` is `put_nowait` on an
+unbounded Phase-0 queue (never blocks/raises); a timeout / exporter-error ⟹ **drop + bump the trace-loss counter**,
+never raising into the caller. The exporter is injected/pluggable (backend-portable — Phoenix/Langfuse swap; real
+LangSmith config Phase 8). **Spans are redacted (§16) before export** — no unredacted egress even on success. Queue +
+in-flight-thread **bounding (drop-on-full) is Phase-8**.
+
 ## §15 — Evals & testing
 **Backbone = LangSmith-native** (datasets, `evaluate()`/`evaluate_comparative()` for the bakeoffs, annotation
 queues for human-preference, `@pytest.mark.langsmith` CI gating, `agentevals` trajectory). **Metric component
@@ -304,6 +330,16 @@ no clobber without confirm + backup). **Redaction chokepoint (R-h):** a single s
 enter LangGraph State/logs) + a structured-logging redactor + an enumerated secret/PII set, applied at every
 egress (logs, traces, error envelopes).
 
+**Redaction chokepoint impl (0.9 — `obs/redaction.py`, `obs/secrets.py`; safety rule 5).** A single `SecretsAccessor`
+(get-by-name + `active_values`; values never persisted; `repr`/`str` are redacted; real OS-keychain accessor Phase 7).
+The redactor scrubs (a) active secret **values** (substring `re.sub`, every occurrence) + (b) a best-effort
+case-insensitive secret/PII **pattern** set — **the GUARANTEE is accessor registration; the patterns are a
+defense-in-depth net** for unregistered tokens. **PINNED (non-waivable):** `redact_envelope` scrubs **both**
+`ErrorEnvelope.creatorMessage` and `maintainerDetail` (+ `suggestedAction`, defense-in-depth) before any egress,
+**fail-closed** (a redactor error ⟹ placeholder, never raw). `redact_span` is **recursive** (nested dicts/lists) so no
+nested value bypasses the chokepoint. `traceRef` is not an egress surface yet (Phase-2 check when populated). Egress
+sites wired now: the tracing exporter + structured logging; the SSE error-event call site is Phase-2/7.
+
 ## §17 — Error taxonomy & failure handling  *(frozen `ErrorEnvelope` contract)*
 **`ErrorEnvelope` = the 6th frozen contract:** `{code (stable enum, namespaced per stage: PROVIDER_TIMEOUT,
 PROVIDER_RATE_LIMIT, PROVIDER_AUTH_QUOTA, PROVIDER_OUTAGE, ARTIFACT_EXPIRED, MALFORMED_OUTPUT, MESH_QA_FAILED,
@@ -320,6 +356,17 @@ submits; cloud-job cancel = stop poll + mark cancelled (note already-billed/aban
 cancel = process-tree kill; free the concurrency slot within a budget (§21). **DISK_FULL** path even though GC
 is deferred (§20). Test-install failure handling (game/Mods-path missing, write denied) → structured error +
 artifact retained.
+
+**Mock failure-injection seam (0.8 — `adapters/mock/failure.py`).** `envelope_for(code)` builds a valid
+`ErrorEnvelope` for **every** `ErrorCode` (×13) with the transient-vs-terminal classification above
+(`PROVIDER_AUTH_QUOTA` → not retryable; provider timeout/rate-limit/outage → retryable). **Error-channel asymmetry:**
+async providers surface a failure in the *result* — `PollResult(status=FAILED|EXPIRED, error=…)` — and workers in
+`BlenderReport` / `ExportJobReport(status=FAILED, error=…)` (the rule-6 `model_validator` enforces *failed ⟹ error*);
+but the **synchronous** `LLMProvider.complete/structured` have no contract error field, so a failure is **raised** as a
+pipeline-local `ProviderError` carrying `.envelope` (candidate to hoist to a neutral `adapters/errors.py` when a
+Phase-2 engine path catches it). Injected envelopes are **egress-realistic** (both `creatorMessage` + `maintainerDetail`
+populated; a synthetic secret-bearing `maintainerDetail` exists as the **0.9 redaction-chokepoint** test surface,
+safety rule 5).
 
 ## §18 — Onboarding / first-run / Settings
 A required **first-run subsystem** + Settings surface (the 12th UI surface, §3) — the app cannot run a stage

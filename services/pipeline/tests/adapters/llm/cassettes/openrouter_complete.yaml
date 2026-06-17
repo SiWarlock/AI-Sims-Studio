@@ -1,0 +1,23 @@
+interactions:
+- request:
+    body: '{"model": "anthropic/claude-sonnet-4", "messages": [{"role": "user", "content":
+      "Say hello"}], "max_tokens": 1024}'
+    headers:
+      content-type:
+      - application/json
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"id": "chatcmpl-synthetic", "object": "chat.completion", "created":
+        1700000000, "model": "anthropic/claude-sonnet-4", "choices": [{"index": 0,
+        "finish_reason": "stop", "message": {"role": "assistant", "content": "Hello
+        from OpenRouter."}}], "usage": {"prompt_tokens": 9, "completion_tokens": 5,
+        "total_tokens": 14}}'
+version: 1

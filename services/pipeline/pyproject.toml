@@ -38,14 +38,6 @@ strict = true
 explicit_package_bases = true
 files = ["graph", "engine", "adapters", "registries", "store", "obs", "tests"]
 
-# The frozen contracts package ships no py.typed marker yet (FINDING, flagged to the
-# orchestrator for a packages/contracts fix). Its editable source IS present, so follow
-# the import to get REAL types at the contract boundary rather than Any. Remove this
-# override once packages/contracts ships py.typed.
-[[tool.mypy.overrides]]
-module = "aisims_contracts.*"
-follow_untyped_imports = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

@@ -8,8 +8,8 @@ producer guarded by a ``spec(§4)`` schema snapshot. Also pins ``GateKind`` sing
 return these bodies are Phase 2; the TS client that consumes them is 0.6.
 """
 
-import ast
 import json
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
 
@@ -161,41 +161,18 @@ def test_gatekind_single_definition() -> None:  # spec(§4)
         assert sym is None or sym is GateKind, mod.__name__
 
 
-def _intra_imports(module: ModuleType) -> set[str]:
-    """The set of sibling ``aisims_contracts`` submodules imported by ``module`` (parsed from its
-    source AST — robust to imports appearing in comments/strings).
-
-    Do NOT call on the package ``__init__`` — it re-exports from all four siblings, so its result
-    would look like cycles and mislead a debugging session. Call on the leaf modules only.
-    """
-    tree = ast.parse(Path(module.__file__ or "").read_text())
-    imported: set[str] = set()
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.ImportFrom)
-            and node.module
-            and node.module.startswith("aisims_contracts.")
-        ):
-            imported.add(node.module.split(".")[1])
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name.startswith("aisims_contracts."):
-                    imported.add(alias.name.split(".")[1])
-    return imported
-
-
-def test_import_direction() -> None:  # spec(§4)
+def test_import_direction(intra_imports: Callable[[ModuleType], set[str]]) -> None:  # spec(§4)
     """Pin the acyclic intra-package import DAG: error ← domain ← ipc ← responses.
 
     mypy does NOT enforce import acyclicity — a cycle would only surface as an ImportError at
     collection. This makes the rule an explicit, pinned spec and pre-positions the Phase-2
     GateKind cycle guard (Q5 carry-forward): now that ipc imports domain (0.4b), a future domain
-    gate model importing GateKind from ipc would create an ipc↔domain cycle.
+    gate model importing GateKind from ipc would create an ipc↔domain cycle. (Helper in conftest.)
     """
-    error_imports = _intra_imports(error_mod)
-    domain_imports = _intra_imports(domain_mod)
-    ipc_imports = _intra_imports(ipc_mod)
-    responses_imports = _intra_imports(responses_mod)
+    error_imports = intra_imports(error_mod)
+    domain_imports = intra_imports(domain_mod)
+    ipc_imports = intra_imports(ipc_mod)
+    responses_imports = intra_imports(responses_mod)
 
     # Forbidden upward edges are ABSENT (the orchestrator's ADD spec):
     assert error_imports.isdisjoint({"domain", "ipc", "responses"}), error_imports

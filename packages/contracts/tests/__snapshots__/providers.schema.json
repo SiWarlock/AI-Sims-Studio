@@ -1,0 +1,274 @@
+{
+  "PollResult": {
+    "$defs": {
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "PollStatus": {
+        "description": "The lifecycle of an async provider job (\u00a77). ``expired`` covers the Tripo 24h URL-expiry\nrace explicitly; adapters collapse provider-specific queue states onto submitted/running.",
+        "enum": [
+          "submitted",
+          "running",
+          "succeeded",
+          "failed",
+          "expired"
+        ],
+        "title": "PollStatus",
+        "type": "string"
+      },
+      "ProviderUsage": {
+        "additionalProperties": false,
+        "description": "Cost+latency carrier for a cloud op (\u00a77/\u00a721). ``latencyMs`` MUST be recorded for every cloud\nop; ``costCents`` SHOULD be (nullable \u2014 falls back to the \u00a721 price-table estimate).",
+        "properties": {
+          "costCents": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Costcents"
+          },
+          "latencyMs": {
+            "minimum": 0,
+            "title": "Latencyms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "latencyMs"
+        ],
+        "title": "ProviderUsage",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "The result of polling a provider job (\u00a77): ``status`` plus, where available, a [0,1]\nprogress fraction, the output ``urls`` (on success), the ``usage`` carrier, and \u2014 on a failed\nor expired poll \u2014 the 0.2 ``ErrorEnvelope`` (\u00a717 single failure contract, never re-rolled).",
+    "properties": {
+      "error": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ErrorEnvelope"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "progress": {
+        "anyOf": [
+          {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Progress"
+      },
+      "status": {
+        "$ref": "#/$defs/PollStatus"
+      },
+      "urls": {
+        "anyOf": [
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Urls"
+      },
+      "usage": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ProviderUsage"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "PollResult",
+    "type": "object"
+  },
+  "ProviderJobRef": {
+    "additionalProperties": false,
+    "description": "The reconcile-spine handle to an async provider job (\u00a77) \u2014 persisted in graph State +\nPostgres so a resume can poll/re-fetch. ``expiresAt`` drives the Tripo 24h re-download race.",
+    "properties": {
+      "expiresAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Expiresat"
+      },
+      "jobId": {
+        "title": "Jobid",
+        "type": "string"
+      },
+      "model": {
+        "title": "Model",
+        "type": "string"
+      },
+      "provider": {
+        "title": "Provider",
+        "type": "string"
+      },
+      "submittedAt": {
+        "format": "date-time",
+        "title": "Submittedat",
+        "type": "string"
+      }
+    },
+    "required": [
+      "provider",
+      "model",
+      "jobId",
+      "submittedAt"
+    ],
+    "title": "ProviderJobRef",
+    "type": "object"
+  },
+  "ProviderUsage": {
+    "additionalProperties": false,
+    "description": "Cost+latency carrier for a cloud op (\u00a77/\u00a721). ``latencyMs`` MUST be recorded for every cloud\nop; ``costCents`` SHOULD be (nullable \u2014 falls back to the \u00a721 price-table estimate).",
+    "properties": {
+      "costCents": {
+        "anyOf": [
+          {
+            "minimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Costcents"
+      },
+      "latencyMs": {
+        "minimum": 0,
+        "title": "Latencyms",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "latencyMs"
+    ],
+    "title": "ProviderUsage",
+    "type": "object"
+  }
+}

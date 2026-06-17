@@ -76,12 +76,27 @@ from aisims_contracts.responses import (
     ValidateResponse,
     responses_schema,
 )
+from aisims_contracts.workers import (
+    BBox,
+    BlenderJob,
+    BlenderJobStatus,
+    BlenderReport,
+    ExportJob,
+    ExportJobReport,
+    ExportJobStatus,
+    GateMetrics,
+    workers_schema,
+)
 
 __all__ = [
     "CONTRACT_VERSION",
     "RESPONSE_MODELS",
     "AssetVariant",
     "AssetVariantState",
+    "BBox",
+    "BlenderJob",
+    "BlenderJobStatus",
+    "BlenderReport",
     "CancelJobResponse",
     "CleanupStatus",
     "CollectionPlan",
@@ -93,6 +108,9 @@ __all__ = [
     "ErrorCode",
     "ErrorEnvelope",
     "ExportArtifact",
+    "ExportJob",
+    "ExportJobReport",
+    "ExportJobStatus",
     "ExportMode",
     "ExportReport",
     "ExportResponse",
@@ -100,6 +118,7 @@ __all__ = [
     "FunctionalOverlay",
     "FunctionalResponse",
     "GateKind",
+    "GateMetrics",
     "GateResponse",
     "HealthResponse",
     "Image3DProvider",
@@ -143,4 +162,5 @@ __all__ = [
     "ipc_schema",
     "providers_schema",
     "responses_schema",
+    "workers_schema",
 ]

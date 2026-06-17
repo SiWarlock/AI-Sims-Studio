@@ -1,0 +1,565 @@
+{
+  "BBox": {
+    "additionalProperties": false,
+    "description": "An axis-aligned bounding box (donor rescale target, \u00a78) \u2014 two cardinality-pinned corners.",
+    "properties": {
+      "maxCorner": {
+        "maxItems": 3,
+        "minItems": 3,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "title": "Maxcorner",
+        "type": "array"
+      },
+      "minCorner": {
+        "maxItems": 3,
+        "minItems": 3,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "title": "Mincorner",
+        "type": "array"
+      }
+    },
+    "required": [
+      "minCorner",
+      "maxCorner"
+    ],
+    "title": "BBox",
+    "type": "object"
+  },
+  "BlenderJob": {
+    "$defs": {
+      "BBox": {
+        "additionalProperties": false,
+        "description": "An axis-aligned bounding box (donor rescale target, \u00a78) \u2014 two cardinality-pinned corners.",
+        "properties": {
+          "maxCorner": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Maxcorner",
+            "type": "array"
+          },
+          "minCorner": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Mincorner",
+            "type": "array"
+          }
+        },
+        "required": [
+          "minCorner",
+          "maxCorner"
+        ],
+        "title": "BBox",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Inputs the sidecar hands the Blender CLI subprocess (\u00a78). ``meshPath`` is a scratch-path ref;\n``params`` is the open, job-specific knob bag (the adapter/worker interprets it).",
+    "properties": {
+      "donorBBox": {
+        "$ref": "#/$defs/BBox"
+      },
+      "jobId": {
+        "title": "Jobid",
+        "type": "string"
+      },
+      "meshPath": {
+        "title": "Meshpath",
+        "type": "string"
+      },
+      "params": {
+        "additionalProperties": true,
+        "title": "Params",
+        "type": "object"
+      }
+    },
+    "required": [
+      "meshPath",
+      "params",
+      "donorBBox",
+      "jobId"
+    ],
+    "title": "BlenderJob",
+    "type": "object"
+  },
+  "BlenderReport": {
+    "$defs": {
+      "BlenderJobStatus": {
+        "description": "Terminal status of a Blender mesh job (\u00a78). The \u00a717 hang-watchdog kill\u2192retry is impl; the\nterminal status is what the report carries.",
+        "enum": [
+          "succeeded",
+          "failed"
+        ],
+        "title": "BlenderJobStatus",
+        "type": "string"
+      },
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "GateMetrics": {
+        "additionalProperties": false,
+        "description": "The \u00a78 game-ready gate metrics: pass/fail flags + counts. ``normals`` (recalc/transfer \u2014 S4S\ndrops normals), ``uv`` (uv_0 + uv_1 present), ``lods`` (LOD + shadow-LOD count), ``polyByTile``\n(per-tile poly budget, ~2000 tris/tile LOD0), ``meshgroups`` (meshgroup-count match).",
+        "properties": {
+          "lods": {
+            "title": "Lods",
+            "type": "integer"
+          },
+          "meshgroups": {
+            "title": "Meshgroups",
+            "type": "integer"
+          },
+          "normals": {
+            "title": "Normals",
+            "type": "boolean"
+          },
+          "polyByTile": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Polybytile",
+            "type": "object"
+          },
+          "uv": {
+            "title": "Uv",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "normals",
+          "uv",
+          "lods",
+          "polyByTile",
+          "meshgroups"
+        ],
+        "title": "GateMetrics",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "The Blender worker result (\u00a78). Outputs are scratch-path refs, absent on a failed run; a\n``model_validator`` pins status\u2194outputs consistency (safety rule 6). ``previewRef`` stays\noptional even on success (nice-to-have, not a core output).",
+    "properties": {
+      "error": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ErrorEnvelope"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "gateMetrics": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/GateMetrics"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "geomBytesRef": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Geombytesref"
+      },
+      "previewRef": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Previewref"
+      },
+      "status": {
+        "$ref": "#/$defs/BlenderJobStatus"
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "BlenderReport",
+    "type": "object"
+  },
+  "ExportJob": {
+    "additionalProperties": false,
+    "description": "Inputs the sidecar hands the @s4tk export worker (\u00a79). ``geomBytesRef`` is the \u00a78 output\nthreaded through (the \u00a78\u2194\u00a79 GEOM-bytes flow); ``textures`` are scratch refs; ``tuningEdits`` is\nthe open OBJD-tuning edit bag; ``targetTGIKeys`` are the target resource keys.",
+    "properties": {
+      "donorRef": {
+        "title": "Donorref",
+        "type": "string"
+      },
+      "geomBytesRef": {
+        "title": "Geombytesref",
+        "type": "string"
+      },
+      "jobId": {
+        "title": "Jobid",
+        "type": "string"
+      },
+      "targetTGIKeys": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Targettgikeys",
+        "type": "array"
+      },
+      "textures": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Textures",
+        "type": "array"
+      },
+      "tuningEdits": {
+        "additionalProperties": true,
+        "title": "Tuningedits",
+        "type": "object"
+      }
+    },
+    "required": [
+      "donorRef",
+      "geomBytesRef",
+      "jobId"
+    ],
+    "title": "ExportJob",
+    "type": "object"
+  },
+  "ExportJobReport": {
+    "$defs": {
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "ExportJobStatus": {
+        "description": "Terminal status of a Sims export job (\u00a79). ``partial`` = some per-item packages complete-and-\nvalid while others failed (never a half-written file). Distinct from the domain ``ExportState``\n(the node's rollup on ``ExportArtifact``); the node MAPS this onto that.",
+        "enum": [
+          "succeeded",
+          "partial",
+          "failed"
+        ],
+        "title": "ExportJobStatus",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "The \u00a79 export-worker result \u2014 renamed from the arch's ``ExportReport`` to disambiguate from\nthe \u00a712 domain ``ExportReport`` (0.4a, frozen; different concern: human-readable summary).\n``packagePath`` is a scratch-path ref, absent on a total failure; a ``model_validator`` pins\nstatus\u2194outputs consistency (safety rule 6): ``succeeded`` \u27f9 packagePath present AND error None;\n``partial`` \u27f9 packagePath present (a partial result MAY carry an ``error`` describing the\nper-item failure); ``failed`` \u27f9 error present.",
+    "properties": {
+      "error": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ErrorEnvelope"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "includedItems": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Includeditems",
+        "type": "array"
+      },
+      "packagePath": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Packagepath"
+      },
+      "resourceManifest": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Resourcemanifest",
+        "type": "array"
+      },
+      "status": {
+        "$ref": "#/$defs/ExportJobStatus"
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "ExportJobReport",
+    "type": "object"
+  },
+  "GateMetrics": {
+    "additionalProperties": false,
+    "description": "The \u00a78 game-ready gate metrics: pass/fail flags + counts. ``normals`` (recalc/transfer \u2014 S4S\ndrops normals), ``uv`` (uv_0 + uv_1 present), ``lods`` (LOD + shadow-LOD count), ``polyByTile``\n(per-tile poly budget, ~2000 tris/tile LOD0), ``meshgroups`` (meshgroup-count match).",
+    "properties": {
+      "lods": {
+        "title": "Lods",
+        "type": "integer"
+      },
+      "meshgroups": {
+        "title": "Meshgroups",
+        "type": "integer"
+      },
+      "normals": {
+        "title": "Normals",
+        "type": "boolean"
+      },
+      "polyByTile": {
+        "additionalProperties": {
+          "type": "integer"
+        },
+        "title": "Polybytile",
+        "type": "object"
+      },
+      "uv": {
+        "title": "Uv",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "normals",
+      "uv",
+      "lods",
+      "polyByTile",
+      "meshgroups"
+    ],
+    "title": "GateMetrics",
+    "type": "object"
+  }
+}

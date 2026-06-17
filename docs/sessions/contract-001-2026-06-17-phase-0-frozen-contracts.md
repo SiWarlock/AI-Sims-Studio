@@ -3,7 +3,7 @@
 - **Date:** 2026-06-17
 - **Phase / track:** Phase 0 (Foundations & frozen contracts) · track `contract` · area `packages/contracts`
 - **Predecessor:** none (first implementer session — project bootstrap)
-- **Successor:** TBD — a fresh successor (context cycle) picks up **0.4b (IPC completion)** from the worktree tracker + the orchestrator's decision file (scope already signed off).
+- **Successor:** [contract-002](contract-002-2026-06-17-contract-family-freeze.md) — §2.5 contract family freeze (0.4b · 0.5a · 0.5b · 0.5c).
 
 ## Why this session existed
 Bootstrap Phase 0: stand up the §2.5/§20 monorepo + strict-typing toolchain, then freeze the

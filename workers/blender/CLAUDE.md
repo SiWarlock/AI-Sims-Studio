@@ -139,7 +139,8 @@ workers/blender/
   gate/             # game-ready gate: rescale-to-donor-bbox, floor-centered origin, normal recalc/transfer, UV validation (uv_0+uv_1), meshgroup-count match, LOD + shadow-LOD generation, per-tile poly budget
   geom/             # GEOM export stage + immediate structural validation (fast GEOM check)
   render/           # render bridge: blender --background multi-view render (Apple-Silicon offscreen path)
-  cli/              # blender --background --factory-startup --python entrypoint (reads job-file, writes result-file)
+  cli/              # (reserved) production blender --background entrypoint + worker-env glue layer — the S1a spike's harness currently lives in spike_geom.py (top-level); a dedicated cli/ entrypoint is the production form
+  blender_scripts/  # bpy-runtime scripts run UNDER Blender's bundled Python by the subprocess (geom_export.py — the S1a custom GEOM writer). Excluded from `mypy --strict` (NOT in the mypy `files` allowlist `["geom", "spike_geom.py", "tests"]`, plus an inline `# mypy: ignore-errors`; `import bpy`/`bmesh` are unresolvable in the worker uv env); ruff still lints/formats. Subprocess-exec'd, never imported → outside the worker-env import DAG.
   io/               # scratch-dir read/write helpers (sidecar-provided scratch only; never the canonical tree)
 ```
 
@@ -173,7 +174,8 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [runner-injection seam](LESSONS.md#1) | Inject the subprocess runner behind a `Protocol` so the deterministic core (command-build, watchdog, report-assembly) is testable headless; real `subprocess` is the only env-gated part (pin: `tests/test_spike_geom.py`). |
+| 2 | 2026-06-17 | [headless GEOM emission](LESSONS.md#2) | Headless Sims-4 GEOM emits via a custom bpy `struct` writer on Blender 5.1/Apple Silicon (SimsWiki `0x015A1849`); TDD the wrapper, capture-then-pin the first real output as fixture; never overclaim a structural PASS as end-to-end (in-game = S1c) (pin: `tests/test_real_geom.py` + `fixtures/cube_v0x05.geom`). |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

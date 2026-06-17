@@ -3,7 +3,7 @@
 - **Date:** 2026-06-17
 - **Phase / track:** Phase 0 (Foundations & frozen contracts) · track `contract` · area `packages/contracts`
 - **Predecessor:** [contract-002](contract-002-2026-06-17-contract-family-freeze.md) — §2.5 contract family freeze (0.4b–0.5c)
-- **Successor:** TBD — a **fresh `services/pipeline`-area implementer** (area transition + context cycle) picks up **0.7** (Postgres store skeleton + Alembic). NOT a `packages/contracts` continuation — the §2.5 contract family + its codegen are complete; Phase 0's remaining slices (0.7–0.9) are sidecar/store work.
+- **Successor:** [contract-004-2026-06-17-services-pipeline-phase0-tail.md](contract-004-2026-06-17-services-pipeline-phase0-tail.md) — the `services/pipeline`-area implementer picked up 0.7–0.9 (store skeleton + mock framework + supervisor/obs/redaction), completing Phase 0.
 
 ## Why this session existed
 Make the frozen §2.5 contracts **consumable** as TypeScript and **guard them**: stand up the

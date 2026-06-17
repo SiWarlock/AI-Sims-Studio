@@ -25,25 +25,24 @@
 
 ## Currently in progress
 
-**Phase 0 — contract track (9 slices landed: 0.1–0.6). 🏁 §2.5 CONTRACTS FROZEN + codegen live.** Round 1 (0.1–0.4a)
-**SEALED + pushed** `d1aa05b`. Round 2 (0.4b–0.5c) **SEALED + pushed** at `0f78259` (D18 checkpoint) — the §2.5-seam
-family complete (error/ipc/responses/domain/providers/workers/registries), each `spec(§X)`-snapshotted. **Round 3
-(unpushed):** 0.6 (py↔ts codegen + CI drift gate, §4) **LANDED** — C1 `033e25f` (codegen: `models_json_schema` → combined
-`$defs` → `json-schema-to-typescript` → `generated/{contracts.ts, helpers.ts}`, deterministic; `--check` gate) + C2
-`ee51b24` (the repo's FIRST CI workflow — GH Actions contracts-drift gate, D20). Plus 2 tooling fixes: `93b9a3e` (D19
-`/preflight` `uv sync --all-packages`) + `99bc955` (the `/preflight` codegen step → `aisims_contracts.codegen --check`).
-70 contracts tests green; `mypy --strict` clean. **Orchestrator round-3 docs accumulating uncommitted** (this reconcile
-+ brief `contract-008` + the §4 codegen-toolchain arch-note + Lessons 12–13 + the carry-forward resolutions) for the
-next `/orchestrate-end` round commit + push.
+**Phase 0 — contract track (10 slices landed: 0.1–0.7). 🏁 §2.5 CONTRACTS FROZEN + codegen live + store skeleton up.**
+Rounds 1–3 **SEALED + PUSHED**: round 1 (0.1–0.4a) `d1aa05b`; round 2 (0.4b–0.5c, the §2.5 family) `0f78259`; round 3
+(0.6 codegen + CI drift gate + the 2 `/preflight` tooling fixes) `18195d6`. **Round 4 (unpushed):** 0.7 (Postgres store
+skeleton, §13) **LANDED** — C1 `379df6f` (repo layer + SQLAlchemy 2.0 async + Alembic + hybrid JSONB persistence +
+version stamp/compat check) + C2 `c500df9` (write-bytes→fsync→commit-row) + C3 `19b1edb` (**SAFETY rule-3 sole-writer
+pin**, security-reviewer CLEAR). 18 tests green; `mypy --strict` (23 files) clean. **First `services/pipeline`-area slice**
+— a fresh `contract-pipeline-implementer` took it (implementer cycle at the 0.6 boundary; orchestrator persisted).
+**Orchestrator round-4 docs accumulating uncommitted** (this reconcile + brief `contract-009` + the §13 store arch-note
++ the area lookup row + `services/pipeline` Lessons §1–3 + the PG-CI carry-forward fold) for the next `/orchestrate-end`.
 
-**Next session target:** `0.7` (Postgres store skeleton + Alembic + versioning, §13) — depends on 0.4 (landed),
-unblocked. Repository layer (sidecar = sole writer, safety rule 3), Alembic baseline, data-dir version stamp + startup
-compat check, `schemaVersion`/`registryVersion` stamps, write-bytes-then-commit-row artifact ordering. First
-services/pipeline-area slice. Then 0.8 (mock framework) → 0.9 (supervisor/obs — carries the PINNED ErrorEnvelope
-redaction safety item), then `/phase-exit 0`. ⏳ **PENDING at Phase-0 exit:** P4 (the 6-track fork-timing — the push is
-a checkpoint, NOT fork-unblocking; tracks fork after this track's Phase 0 + integration merge) + the deferred holistic
-CI (D20) return to the lead/user. Inv1 (full exportability gate) + Inv5 (ordered approval gates) remain PINNED
-non-droppable **Phase-2** safety items (D16). (0.5 was decomposed → 0.5a/0.5b/0.5c.)
+**Next session target:** `0.8` (Mock-adapter framework + failure injection) — depends on 0.5 (provider/worker contracts)
++ 0.2 (ErrorEnvelope), both landed. Mock impls behind every provider/worker interface + deterministic failure-injection
+spanning the `ErrorEnvelope` taxonomy. `services/pipeline/adapters/mock/*`. Then 0.9 (supervisor/obs — carries the
+PINNED ErrorEnvelope-redaction safety item), then `/phase-exit 0`. ⏳ **PENDING at Phase-0 exit:** P4 (6-track
+fork-timing — the push is a checkpoint, NOT fork-unblocking) + the deferred holistic CI (D20, incl. the store PG-in-CI
+job) + the **`py.typed` Finding** (contracts packaging — awaiting lead ruling) return to the lead/user. Also held: the
+0.5b **snapshot-hardening micro-slice** (needs a `packages/contracts` implementer). Inv1 (exportability gate) + Inv5
+(ordered gates) remain PINNED non-droppable **Phase-2** safety items (D16). (0.5 → 0.5a/0.5b/0.5c.)
 
 ---
 
@@ -54,7 +53,7 @@ non-droppable **Phase-2** safety items (D16). (0.5 was decomposed → 0.5a/0.5b/
 - **`GateKind` import-DAG / relocation (origin: 2026-06-17 · 0.4b / Q5 / D15).** 0.4b made the `ipc → domain` import edge live (the 4 SSE fields tightened to domain enums). `GateKind` stays single-homed in `ipc.py` (no domain consumer yet; guarded by `test_gatekind_single_definition`). When a **Phase-2 domain gate model** needs `GateKind`, importing it from `ipc` would close an `ipc ↔ domain` cycle → **relocate `GateKind` to `domain.py` (or a neutral shared-enums module) then**, never import upward. `test_import_direction` mechanically pins the acyclic DAG (`error←domain←ipc←responses`), so the cycle can't land silently. **Last-consumer-slice: Phase-2 (the slice that adds a domain gate model).** (Lesson 5/6.)
 - **`StructuredT` TypeVar package-export (origin: 2026-06-17 · 0.5a).** `LLMProvider.structured`'s `StructuredT` (TypeVar bound=BaseModel) is importable from `aisims_contracts.providers` but is NOT in the package `__all__`. Decide package-level export when **0.8** mock adapters implement `LLMProvider.structured` (an adapter conforming to the Protocol doesn't strictly need it exported). **Last-consumer-slice: 0.8.**
 - **Snapshot-test hardening back-port (origin: 2026-06-17 · 0.5b).** 0.5b added two guards worth back-porting: (1) `min_length=1` on path/ref `str` fields (an empty-string ref passes a None-check but isn't a usable path — applies to providers `urls`/refs + domain path fields `imagePath`/`meshPath`/`outputPath`/… + registry `id`/`key`/`name`, 0.5c); (2) the explicit value-model-SET assertion in the snapshot test (`set(models)==expected` — catches a silently-dropped model before a blind regen). Apply to `test_providers.py` + `test_domain.py` (+ registries) in a hardening pass. **OWN dedicated micro-slice** — NOT folded into 0.6 (impl's bisectability call: (1) is a *contract* change that re-freezes 3 frozen snapshots; mixing it into a tooling slice muddies bisectability). Schedule as a standalone slice (before/with 0.7). **Last-consumer-slice: own slice (TBD).**
-- **Deferred holistic CI build-out (origin: 2026-06-17 · 0.6 / D20).** 0.6 lands ONLY the minimal GitHub Actions contracts-drift job (`codegen --check` + pytest). The full CI — **per-area lint/type/test jobs for all 6 areas** (apps/desktop · services/pipeline · workers/blender · workers/export · packages/contracts · evals; root `uv sync --all-packages` per D19) — is DEFERRED to a **Phase-0-exit or dedicated infra slice**; pairs with **P4** (the 6-track fork-timing) as Phase-0-exit infra. **Last-consumer-slice: Phase-0-exit (infra).**
+- **Deferred holistic CI build-out (origin: 2026-06-17 · 0.6 / D20).** 0.6 lands ONLY the minimal GitHub Actions contracts-drift job (`codegen --check` + pytest). The full CI — **per-area lint/type/test jobs for all 6 areas** (apps/desktop · services/pipeline · workers/blender · workers/export · packages/contracts · evals; root `uv sync --all-packages` per D19) — is DEFERRED to a **Phase-0-exit or dedicated infra slice**; pairs with **P4** (the 6-track fork-timing) as Phase-0-exit infra. The **services/pipeline job additionally needs a PG service** to run 0.7's store PG-integration test (the `AISIMS_TEST_DATABASE_URL`-gated round-trip — sqlite covers the unit logic but NOT PG-specifics like JSONB ops/pgvector; origin 0.7). **Last-consumer-slice: Phase-0-exit (infra).**
 
 ---
 
@@ -278,10 +277,12 @@ drift. No business logic — just the contracts, codegen, store skeleton, mock f
 - ✅ **LANDED** C1 `033e25f` (codegen pipeline) + C2 `ee51b24` (CI workflow). 70 tests green (incl. node-coupled, not skipped); `mypy --strict` clean; `--check` exit 0; codegen byte-deterministic. code-quality fixed in-slice (incl. a [high] `$ref`-sibling over-collapse). + tooling fix `99bc955` (/preflight codegen step, 2nd Finding).
 
 ### 0.7 — Postgres store skeleton + Alembic + versioning
-- [ ] Repository layer (sidecar = sole writer); Alembic baseline; data-dir **version stamp** + startup compat check; project `schemaVersion`/`registryVersion` stamps; write-bytes-then-commit-row artifact ordering (§13).
-- [ ] Files: NEW `services/pipeline/store/*`, `migrations/*`
-- [ ] Cross-doc invariant: extended (mirrors §12 domain models)
-- [ ] Depends on: 0.4
+- [x] Repository layer (`Repository[T]` + `ProjectRepository`; sidecar = SOLE writer, rule 3) — SQLAlchemy 2.0 async + Alembic; **hybrid** persistence (key cols + entity as JSONB carrying `schemaVersion`; `with_variant(JSON,"sqlite")`). Alembic baseline {project,pipeline_run,step,schema_meta} (pgvector deferred). `open_store` stamps {schemaVersion,registryVersion,appVersion,dataDirVersion} + REFUSES incompat (`IncompatibleStoreError`); migrate-runner deferred.
+- [x] write-bytes→`fsync(file+dir)`→commit-row helper (`commit_artifact` — no DB handle = structural sole-writer guard; canonical-path traversal guard, rule 4). [SAFETY rule-3 sole-writer pin isolated in its own commit.]
+- [x] Files: NEW `services/pipeline/store/*` (db/models/repository/versioning/artifacts/facade + migrations) + `tests/store/*`; MOD `pyproject.toml`/`uv.lock` (+ a `py.typed` mypy-override stopgap — see Finding)
+- [x] Cross-doc invariant: none (the store CONSUMES the frozen `aisims_contracts.domain`; no field change) — orchestrator wrote the §13 store arch-note + the area lookup row + Lessons §1–3
+- [x] Depends on: 0.4 (landed)
+- ✅ **LANDED** C1 `379df6f` (store skeleton + repo + Alembic + versioning) + C2 `c500df9` (write-ordering) + C3 `19b1edb` (**SAFETY rule-3 sole-writer pin**, security-reviewer CLEAR). 18 tests green; `mypy --strict` (23 files) clean; sqlite+aiosqlite unit layer + env-gated PG test. Reviewers fixed in-slice (security [HIGH] path-traversal guard; code-quality [HIGH]×2 env.py models-import + engine-disposal). **Finding → lead:** contracts missing `py.typed` (cross-area; stopgap applied).
 
 ### 0.8 — Mock-adapter framework + failure injection
 - [ ] Mock impls behind every provider/worker interface (PIPE-002); deterministic **failure-injection mode** spanning the `ErrorEnvelope` taxonomy (REQ-T-101).
@@ -727,3 +728,14 @@ _(Empty at project start; populated as scope cuts surface.)_
 - **Round seal:** D18-style milestone checkpoint — sealed + pushed to origin/track/contract (NOT a fork-merge).
 - **Next session target:** 0.7 (Postgres store skeleton + Alembic + versioning, §13) — fresh services/pipeline implementer, after the seal. Then 0.8 → 0.9 → `/phase-exit 0` (P4 + holistic-CI return there).
 - **Reference:** implementer session doc `docs/sessions/contract-003-2026-06-17-codegen-drift-gate.md`.
+
+### 2026-06-17 — Phase 0 contracts round 4 (0.7 + D24): store skeleton; ORCHESTRATOR cycle
+
+- **Landed:** 0.7 Postgres store skeleton (§13) — C1 `379df6f` (repo layer `Repository[T]`+`ProjectRepository`, sidecar = sole writer rule 3; SQLAlchemy 2.0 async + Alembic; hybrid key-cols+JSONB persistence carrying `schemaVersion`; version stamp + `open_store` compat check → `IncompatibleStoreError`) + C2 `c500df9` (write-bytes→`fsync(file+dir)`→commit-row `commit_artifact`, no DB handle) + C3 `19b1edb` (**SAFETY rule-3 sole-writer pin**, isolated, security-reviewer CLEAR + path-traversal guard). 18 tests; `mypy --strict` (23 files) clean; sqlite unit + env-gated PG. **First `services/pipeline`-area slice** (fresh `contract-pipeline-implementer`; orchestrator persisted across the impl cycle).
+- **D24 (py.typed):** `14ec0ce` — added the PEP 561 marker to `packages/contracts` (the frozen contracts shipped none → every consumer saw them untyped under `mypy --strict`). **Freeze-safe** (snapshots green, 70 passed); verified `services/pipeline` `mypy --strict` passes (25 files) with the stopgap override REMOVED. Lead-authorized in-scope packaging fix.
+- **Decisions:** **D24** (py.typed — surfaced-as-Finding-then-resolved). The store PG-in-CI follow-up folded into the holistic-CI carry-forward.
+- **Lessons banked:** `services/pipeline` §1–3 (the area's FIRST — hybrid persistence · artifact durability + sole-writer · store test-DB).
+- **Carry-forward:** 6 items, all SPREAD/KEEP, under cap (ErrorEnvelope code-tolerance→Phase-7; redaction→0.9; GateKind DAG→Phase-2; StructuredT→0.8; snapshot-hardening→own-slice/needs a `packages/contracts` impl; holistic-CI + store-PG-in-CI→Phase-0-exit).
+- **🔁 ORCHESTRATOR CYCLE:** the orchestrator hit WARN (72%) at the clean 0.7→0.8 boundary (0.7 routed, D24 done, 0.8 not started). Round 4 sealed + **pushed** (D18-style checkpoint). A fresh **`contract-pipeline-orchestrator`** succeeds and **dispatches 0.8 as its first action** (baked into its spawn prompt — avoids a dispatch-gap stall). The `contract-pipeline-implementer` (idle, waiting on 0.8) **PERSISTS**. (Lineage: the contracts implementer cycled at the 0.6 boundary; this contracts orchestrator was itself a round-1 successor.)
+- **Next session target:** 0.8 (Mock-adapter framework + failure injection, `services/pipeline/adapters/mock/*`) — the successor authors the brief (`contract-010`) + dispatches to the persisting pipeline impl. Then 0.9 (supervisor/obs — the PINNED ErrorEnvelope-redaction safety item), then `/phase-exit 0` (P4 + holistic-CI + the snapshot-hardening micro-slice resolve there).
+- **Reference:** no separate orchestrator session doc (this Log + "Currently in progress" carry the handoff); 0.7 impl detail rides the commits + the pipeline impl's future session doc.

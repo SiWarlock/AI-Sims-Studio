@@ -52,6 +52,7 @@ Don't paste these sections into the prompt. Grep the file:section, read only wha
 |---|---|---|
 | Pipeline orchestration (LangGraph) | `ARCHITECTURE.md` | §5 |
 | Job/run engine + supervisor | `ARCHITECTURE.md` | §6 |
+| Store & artifacts (Postgres + Alembic + versioning + sole-writer) | `ARCHITECTURE.md` | §13 |
 | Lessons logged (full prose) | `services/pipeline/LESSONS.md` | by lesson # |
 
 <!-- Starts near-empty. Add a row whenever a topic is looked up twice. -->
@@ -182,7 +183,9 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [Hybrid store persistence](LESSONS.md#1) | persist domain entities as hybrid rows — key/indexed columns + the versioned entity as JSONB (`with_variant` for sqlite tests); avoid full-relational mapping that churns the schema on every model change |
+| 2 | 2026-06-17 | [Artifact durability + sole-writer](LESSONS.md#2) | write-bytes → `fsync(file+dir)` → repo-owned commit-row (crash ⇒ orphan, never a dangling row); the mover takes a commit callback, never a DB handle (structural rule-3 guard); sanitize canonical path segments (rule 4) |
+| 3 | 2026-06-17 | [Store test-DB](LESSONS.md#3) | sqlite+aiosqlite unit layer for a fast deterministic gate (hybrid models via `with_variant`) + an env-gated real-PG integration test; PG must run in CI before production load (D20) |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

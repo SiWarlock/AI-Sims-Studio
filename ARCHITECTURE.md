@@ -254,6 +254,14 @@ return paths, §6). **Migration & versioning (R-i):** project folders stamped wi
 `registryVersion`; a migration runner on project-open (Alembic DB + on-disk layout + registry content);
 "dependency changed (Blender/@s4tk/GEOM-exporter pin) → re-validate cached donors/GEOM" path. Backup = copy
 project folder + `pg_dump`. Secrets: **OS keychain** (encrypted-file fallback), never in DB/logs/traces.
+**0.7 store skeleton:** the sidecar **repository layer** (`services/pipeline/store/`; `Repository[T]` + per-aggregate
+concretes) is the SOLE writer (rule 3) — persistence is **hybrid** (key/indexed columns + the versioned entity as
+**JSONB** carrying `schemaVersion`; SQLAlchemy 2.0 async + Alembic; `JSONB().with_variant(JSON,"sqlite")` for the
+test layer). `open_store` stamps {schemaVersion, registryVersion, appVersion, dataDirVersion} + **REFUSES** an
+incompatible store on re-open (`IncompatibleStoreError`). The write-ordering helper `commit_artifact` does
+bytes→`fsync(file+dir)`→repo-owned commit-row (crash ⇒ orphan, never a dangling row) and holds **no DB handle**
+(structural sole-writer guard) + sanitizes canonical path segments (rule 4). Migrate-runner + the full per-entity
+repos are Phase-2.
 
 ## §14 — Observability
 **LangSmith** (hosted) via env-var/callback, instrumented over a **thin tracing seam** (Phoenix/Langfuse =

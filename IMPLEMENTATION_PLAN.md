@@ -25,16 +25,25 @@
 
 ## Currently in progress
 
-**Bootstrap session.** Planning chain complete (`/arch-draft` → `/arch-finalize` → `/tasks-gen`). Scaffolding
-not yet generated; first `/tdd` slice not started.
+**Phase 0 — contract track.** 0.1 (scaffold) + 0.2 (ErrorEnvelope) + 0.3 (IPC contract) **LANDED** on
+`track/contract` (`143381a`, `c93215b`, `e7b628a`; + `b0c3803` spec-lint tooling). Commit gate operational
+(hooks regenerated machine-valid; gitleaks blocking). Orchestrator round docs (ARCHITECTURE/CLAUDE/
+IMPLEMENTATION_PLAN edits + 2 briefs + decision file) **accumulating uncommitted** for the `/orchestrate-end`
+round commit + push (next trigger: context auto-cycle at ACTION, Phase-0 exit, or user return).
 
-**Next session target:** `0.1` (repo scaffold + frozen-contract package).
+**Next session target:** `0.4a` (Domain types — 16 entities + state-machine enums + structural invariants +
+`domain.schema.json`) **IN FLIGHT** (split from 0.4 per D16, lead-approved). `0.4b` (IPC completion: REST
+response bodies + the str→domain-enum tightening of 0.3's 4 SSE fields + `GateKind` import + `ipc.schema.json`
+re-freeze) follows, **depends on 0.4a**. Inv1 (full exportability gate) + Inv5 (ordered approval gates) are
+PINNED, non-droppable **Phase-2** safety acceptance items (D16) — 0.4a encodes only the structural part.
 
 ---
 
 ## Carry-forward to upcoming briefs
 
-_(Empty at project start; populated as Step-9 routing surfaces operational items.)_
+- **ErrorEnvelope `code` consumer-tolerance (origin: 2026-06-17 · 0.2 / D10b).** UI SSE/IPC deserialization + the 0.6 TS codegen type MUST degrade gracefully on an unrecognized `code` → map to `SYSTEM`, so a future additive enum split (e.g. `PROVIDER_AUTH` + `PROVIDER_QUOTA`) is non-breaking. The 0.2 producer model stays a STRICT closed enum (RED #4 + `extra="forbid"`); tolerance lives in CONSUMERS. **Last-consumer-slice: 0.6** (codegen) + Phase 7 (UI deserialization). Strict model + tolerant consumers = the production-grade combo.
+- **⚠ SAFETY-TRACKED (rule 5, non-droppable) — ErrorEnvelope redaction-egress (origin: 2026-06-17 · 0.2).** `creatorMessage` + `maintainerDetail` are free-text PII/secret-bearing egress surfaces — the §16 redaction chokepoint / §14 tracing MUST scrub them before any logs/traces/SSE egress. Marked at the model via inline code comment + anchored in `ARCHITECTURE.md §17`. **Encoded as a PINNED, non-waivable acceptance bullet in task 0.9** (the obs/redaction seam) — the redaction impl cannot ship without a test covering both fields. **Last-consumer-slice: 0.9.**
+- **ErrorEnvelope JSON-Schema field titles (origin: 2026-06-17 · 0.2).** pydantic auto-derives schema `title`s from field names (`creatorMessage` → "Creatormessage"); these bake into the snapshot and surface in the 0.6 TS-codegen JSDoc. Set proper `Field(title=…)` (or handle in codegen) in **0.6** so generated consumer types read well — deferred to avoid churning the 0.2 freeze snapshot.
 
 ---
 
@@ -174,41 +183,54 @@ task's RED outline must include a **schema-snapshot test**.
 **Goal:** Stand up the monorepo + freeze every shared contract (the §2.5 seams) so tracks can fork without
 drift. No business logic — just the contracts, codegen, store skeleton, mock framework, and supervisor stubs.
 
-**Spec anchors:** `ARCHITECTURE.md §2.5`, §4, §6, §7, §8, §9, §11, §12, §13, §17, §21, §3 (shell skeleton), §14 (seam).
+**Spec anchors:** `ARCHITECTURE.md §2.5`, §4, §6, §7, §8, §9, §11, §12, §13, §16 (token boundary 0.3 + redaction 0.9), §17, §21, §3 (shell skeleton), §14 (seam).
 
 **Track:** contract · **Depends on (phases):** none.
 
 ### 0.1 — Monorepo scaffold + toolchain
 
 <!-- ▼ EXAMPLE BLOCK [id=task-entry-format]: task entry format — dense checkbox bullets, NOT a pre-written brief. ▼ -->
-- [ ] Create the §20 monorepo layout: `apps/desktop`, `services/pipeline/{graph,adapters,engine,registries,store}`, `workers/blender`, `workers/export`, `packages/contracts`, `evals`.
-- [ ] Pin toolchain: Python 3.13 (sidecar; bpy compatibility), Node (Electron + @s4tk worker), Blender 5.1.x detect, Postgres + pgvector bundle plan.
-- [ ] Files: NEW repo dirs, `pyproject.toml`/`package.json`(s), `.tool-versions`/pins
-- [ ] Cross-doc invariant: none
-- [ ] Depends on: none
+- [x] Create the §20 monorepo layout: `apps/desktop`, `services/pipeline/{graph,adapters,engine,registries,store}`, `workers/blender`, `workers/export`, `packages/contracts`, `evals`.
+- [x] Pin toolchain: Python 3.13 (sidecar; bpy compatibility), Node (Electron + @s4tk worker), Blender 5.1.x detect, Postgres + pgvector bundle plan.
+- [x] Files: NEW repo dirs, `pyproject.toml`/`package.json`(s), `.tool-versions`/pins (+ pnpm/uv workspaces, `.pre-commit-config.yaml` + gitleaks gate)
+- [x] Cross-doc invariant: none
+- [x] Depends on: none
+- ✅ **LANDED** C1 `143381a` (chore(scaffold)). All 6 areas lint+typecheck+test green; Blender/Postgres deferred to Phase 10 (deploy notes).
 <!-- ▲ END EXAMPLE BLOCK [id=task-entry-format] ▲ -->
 
 ### 0.2 — `ErrorEnvelope` (6th frozen contract)
-- [ ] Define `ErrorEnvelope{code(stable per-stage enum), category, retryable, creatorMessage, maintainerDetail, traceRef, suggestedAction}` (§17); enum covers PROVIDER_TIMEOUT/RATE_LIMIT/AUTH/OUTAGE, ARTIFACT_EXPIRED, MALFORMED_OUTPUT, MESH_QA_FAILED, GEOM_EXPORT_FAILED, DBPF_WRITE_FAILED, TEST_INSTALL_FAILED, DISK_FULL, VALIDATION_FAILED, SYSTEM.
-- [ ] Carried in SSE `error` event, `Step.error`, `ValidationResult`; every stage (mock+real) emits it.
-- [ ] Files: NEW `packages/contracts/error.py` + generated TS
-- [ ] Cross-doc invariant: NEW (Appendix A; §2.5-seam → RED outline includes schema-snapshot test)
-- [ ] Depends on: 0.1
+- [x] Define `ErrorEnvelope{code(stable per-stage enum), category, retryable, creatorMessage, maintainerDetail, traceRef, suggestedAction}` (§17); enum covers PROVIDER_TIMEOUT/RATE_LIMIT, **PROVIDER_AUTH_QUOTA** (single — D10), PROVIDER_OUTAGE, ARTIFACT_EXPIRED, MALFORMED_OUTPUT, MESH_QA_FAILED, GEOM_EXPORT_FAILED, DBPF_WRITE_FAILED, TEST_INSTALL_FAILED, DISK_FULL, VALIDATION_FAILED, SYSTEM (13 closed).
+- [ ] Carried in SSE `error` event, `Step.error`, `ValidationResult`; every stage (mock+real) emits it. *(contract defined in 0.2; runtime emit sites land 0.3 + 2.x)*
+- [x] Files: NEW `packages/contracts/src/aisims_contracts/error.py` + checked-in JSON-Schema snapshot *(generated TS → 0.6 codegen)*
+- [x] Cross-doc invariant: NEW (Appendix A; §2.5-seam → spec(§17) schema-snapshot test shipped) — orchestrator wrote the cross-doc row + `pin:` + the §17 redaction annotation
+- [x] Depends on: 0.1
+- ✅ **LANDED** C2 `c93215b` (feat(contracts)). 8 tests green + frozen snapshot; `extra="forbid"`; Q1=A/Q2=A; min_length=NO. Runtime emit + TS codegen deferred (0.3 / 0.6 / 2.x).
 
 ### 0.3 — IPC contract (REST + SSE + cancel + token + versioning)
-- [ ] Endpoint table (§4): projects/runs/gate/regenerate/include/functional/validate/export/test-install/rerun/cancel/settings, each with request/response + `ErrorEnvelope` error codes + **idempotency key**.
-- [ ] SSE event taxonomy (`progress|step-state|log|validation|cost|gate-needed|done|error`) typed payloads; resumable via `Last-Event-ID`.
-- [ ] `contractVersion` negotiated at `/health`; **per-launch loopback token** required on every request (reject otherwise).
-- [ ] Files: NEW `packages/contracts/ipc.py` + generated TS client
-- [ ] Cross-doc invariant: NEW (§2.5-seam → schema-snapshot test)
-- [ ] Depends on: 0.2
+- [x] Endpoint table (§4): projects/runs/gate/regenerate/include/functional/validate/export/test-install/rerun/cancel/settings — 14 endpoints, request models + per-endpoint `ErrorCode` map (⊆ §17) + **idempotency key** (13 mutating, LIST_PROJECTS read-only). *(REST response bodies → 0.4, Q1/D15)*
+- [x] SSE event taxonomy (`progress|step-state|log|validation|cost|gate-needed|done|error`) typed payloads — discriminated union on `event`; resumable via `Last-Event-ID` (str `id`).
+- [x] `contractVersion` ("1.0") in `HealthResponse`; **per-launch loopback token** wire convention (`X-AISims-Token` header) defined *(reject-on-missing enforcement → Phase 2)*.
+- [x] Files: NEW `packages/contracts/src/aisims_contracts/ipc.py` + checked-in snapshot *(generated TS client → 0.6)*
+- [x] Cross-doc invariant: NEW (§2.5-seam → spec(§4) schema-snapshot shipped) — orchestrator wrote the IPC cross-doc row + pin
+- [x] Depends on: 0.2 (landed)
+- ✅ **LANDED** `e7b628a` (feat(contracts)). 18 tests green; domain-independent (Q1/D15) — LogLevel/GateKind protocol enums (GateKind pins the 5 approval gates); domain `str` fields (StepStateEvent/DoneEvent.status, ValidationEvent.severity+scope) → mandatory 0.4 tighten; `FunctionalRequest.archetype` correctly an open-registry `str` (§11, not an enum); fraction [0,1]. Runtime routes/SSE/token-enforcement → Phase 2; TS client → 0.6.
 
-### 0.4 — Domain types + Appendix-A models
-- [ ] pydantic models for Project, CollectionPlan, StyleBible, ItemSpec, ConceptCandidate, MeshCandidate, AssetVariant, Swatch, FunctionalOverlay, PipelineRun, Step, ValidationResult, ExportArtifact, ReviewEvent, Trace (§12, Appendix A); all carry `schemaVersion`.
-- [ ] Encode invariants as types where possible (e.g. exportable requires selected AssetVariant); the new state machines (skipped/unsupported/cancelled/AssetVariant/overlay invalid→draft/project export-failed).
-- [ ] Files: NEW `packages/contracts/domain.py` + generated TS
-- [ ] Cross-doc invariant: NEW (§2.5-seam → schema-snapshot test)
-- [ ] Depends on: 0.1
+### 0.4a — Domain types + Appendix-A models  *(split from 0.4 per D16; 0.4b depends on this)*
+- [x] pydantic models for the **16 entities**: Project, CollectionPlan, StyleBible, ItemSpec, ConceptCandidate, MeshCandidate, AssetVariant, Swatch, FunctionalOverlay, PipelineRun, Step, ValidationResult, ExportArtifact, **ExportReport**, ReviewEvent, Trace (§12 / `docs/planning/DATA_MODEL.md`). 13 top-level carry `schemaVersion`; StyleBible/Swatch/ExportReport embedded (inherit parent's). Open-registry keys (`archetype`/`placementCategory`) `str` (Inv6). ProviderConfig/Secret OUT (§18).
+- [x] **State-machine StrEnums** (membership-pinned, exact ==): ProjectState(8), ItemState(19 = 13 base + 6 audit), StepState(8), AssetVariantState(4), ConceptState(4), MeshState(4) + QaStatus(3) + CleanupStatus(4), OverlayState(4), ExportState(6), **+ ExportMode(3), Severity(4), ValidationScope(5)** = 13 enums. States only — transitions are Phase-2 engine.
+- [x] **Invariants-as-types (structural):** Inv2 (`FunctionalOverlay.sourceItemId` same-identity str ref — safety-rule-2), Inv7 (`AssetVariant.swatches` ≥1), variant lineage (conceptRef+meshRef). **Inv1 (full exportability gate) + Inv5 (ordered gates) → Phase-2 safety pin (D16).**
+- [x] Files: NEW `domain.py` + `test_domain.py` + `domain.schema.json` (spec(§12)). (TS codegen → 0.6.)
+- [x] Cross-doc invariant: NEW (§2.5-seam → schema-snapshot) — orchestrator wrote the domain row + pin; Appendix-A §12 extended w/ ExportReport
+- [x] Depends on: 0.1, 0.2 (landed)
+- ✅ **LANDED** `4a69df5` (feat(contracts)). 25 contracts tests green; Trace.status→StepState; reviewer fixes in (MeshCandidate.userDecision, ExportMode enum). 0.4b (IPC completion) next.
+
+### 0.4b — IPC contract completion (D15) — depends on 0.4a
+- [ ] **IPC REST response bodies** for the 14 §4 endpoints (embed domain entities) → NEW `responses.py` (imports ipc + domain; keeps `ipc.py` domain-independent as 0.3 froze it).
+- [ ] **[D15 · MANDATORY · PINNED] str→domain-enum tighten** 0.3's SSE fields: `StepStateEvent.status`→`StepState`; `DoneEvent.status`→run-terminal subset {succeeded,failed,cancelled}; `ValidationEvent.severity`→`Severity`; `ValidationEvent.scope`→`ValidationScope`. **Re-freeze `ipc.schema.json`.** No loose `str` domain-field survives.
+- [ ] **Import `GateKind` from `aisims_contracts.ipc`** wherever the domain gate model needs the 5 gates — do NOT redefine (no duplicate §2.5-seam enum).
+- [ ] Files: NEW `responses.py` + `test_responses.py`; MOD `ipc.py`/`test_ipc.py`/`ipc.schema.json` (re-frozen), `__init__.py`
+- [ ] Cross-doc invariant: CHANGED (IPC re-freeze — orchestrator updates the IPC row)
+- [ ] Depends on: 0.4a, 0.3
 
 ### 0.5 — Provider + worker + registry contracts
 - [ ] `Image3DProvider`/`ImageGenProvider` (`submit/poll/fetch` + `ProviderJobRef{provider,model,jobId,submittedAt,expiresAt?}` + PollStatus + cost/latency); `LLMProvider` (`complete/structured`) — §7.
@@ -239,6 +261,7 @@ drift. No business logic — just the contracts, codegen, store skeleton, mock f
 ### 0.9 — Supervisor + observability seam (skeletons)
 - [ ] Supervisor: free-port pick, spawn + `/health` + restart-with-backoff + process-tree teardown for Postgres/sidecar/Blender/@s4tk (§6, REQ-O-103). Single-writer lock w/ PID+heartbeat.
 - [ ] Thin tracing seam → LangSmith, **fail-open** (background queue + export timeout + drop-on-timeout) (§14); redaction chokepoint (secrets accessor never enters State/logs) (§16).
+- [ ] **[SAFETY-RULE-5 · PINNED · NON-DROPPABLE]** Redaction chokepoint MUST scrub `ErrorEnvelope.creatorMessage` + `maintainerDetail` (free-text PII/secret-bearing egress surfaces) before ANY egress (logs/traces/SSE) — **pin:** a redaction test asserting both fields are scrubbed; this acceptance bullet cannot be waived. (origin 0.2; §16/§17 redaction-required marker.)
 - [ ] Files: NEW `services/pipeline/engine/supervisor.py`, `services/pipeline/obs/*`
 - [ ] Cross-doc invariant: none
 - [ ] Depends on: 0.1
@@ -329,6 +352,8 @@ parallel scheduling, reconcile-and-resume, human gates — provably resumable en
 
 ### Acceptance criteria (2)
 - [ ] All 2.X ticked. A full mock collection runs on the graph; kill mid-run → reopen → reconcile + resume from last completed step with **no lost accepted assets and no double-submit** (the reconcile-resume contract test). Gates pause/resume across process exit.
+- [ ] **[SAFETY-RULE-1 · PINNED · NON-DROPPABLE · D16] Full exportability gate.** 0.4a type-encodes only the structural part (export-ready requires a selected-variant ref). The Phase-2 engine validator MUST complete the 3-condition gate — an item is exportable **only if** `included ∧ has a selected AssetVariant ∧ no blocking validation` (Inv1) — pinned by a test asserting all three conditions gate export. Don't let the safety gate fall through the 0.4→Phase-2 handoff.
+- [ ] **[SAFETY-RULE-6 · PINNED · NON-DROPPABLE · D16] Ordered approval gates (Inv5).** The 5 gates enforce strict order plan→concept→mesh→overlay→export (no mesh before concept-approved; no overlay before variant-selected; no export before export-approval) — enforced by the Phase-2 state machine / LangGraph interrupts, pinned by a test. `GateKind` (the pinned set, from the 0.3 contract) is the canonical enum.
 
 ---
 
@@ -639,4 +664,13 @@ _(Empty at project start; populated as scope cuts surface.)_
 
 ## Log
 
-_(Empty at project start; populated at every `/orchestrate-end`.)_
+### 2026-06-17 — Phase 0 contracts round 1 (0.1–0.4a): scaffold + 4 frozen §2.5 contracts
+
+- **Landed:** 0.1 monorepo scaffold + pinned strict-typing toolchain + pre-commit gate (`143381a`); 0.2 ErrorEnvelope (`c93215b`); 0.3 IPC contract (`e7b628a`); 0.4a domain model — 16 entities + 13 state enums + structural invariants (`4a69df5`). Plus `b0c3803` spec-lint tooling fix. All §2.5-seam contracts frozen with `spec(§X)` schema-snapshot guards; full preflight green (6 areas, 25 contracts tests).
+- **Decisions (lead D-log):** D7/D8 pre-commit-in-scope hook fix; D10 ErrorEnvelope enum = single `PROVIDER_AUTH_QUOTA` + no schemaVersion; D11 schemaVersion on persisted-only (embedded value objects inherit); D15 IPC domain-independent (0.3) + mandatory domain-enum tightening (0.4b); D16 split 0.4 → 0.4a/0.4b + Inv1/Inv5 pinned Phase-2 safety items.
+- **Scope shifts:** 0.4 split → 0.4a (domain, landed) + 0.4b (IPC completion, next). IPC REST response bodies deferred 0.3→0.4b. Inv1 (exportability gate) + Inv5 (ordered gates) → pinned non-droppable Phase-2 acceptance items; ErrorEnvelope redaction → pinned 0.9 safety item.
+- **Infra:** the stale cross-machine `commit-msg` hook (blocked all commits) resolved in-scope via a real pre-commit setup (ruff + mypy + conventional-commits) + gitleaks; spec-lint numeric-task-ID fix.
+- **Lessons banked:** §1–§5 (snapshot-freeze discipline · enum discipline · boundary strictness · contract-scope · seam enum-ownership) with pin/grep enforcement.
+- **Next session target:** 0.4b (IPC completion — REST response bodies + the 4-field str→domain-enum tighten + `GateKind` import + `ipc.schema.json` re-freeze; depends on 0.4a; design signed off via D15/D16). Then 0.5–0.9.
+- **Context cycle:** round closed at orchestrator WARN (71%) on the clean 0.4a boundary (no slice in flight); fresh successors pick up 0.4b from the tracker + `docs/contract-001-errorenvelope-seam-decisions.md`.
+- **Reference:** implementer session doc `docs/sessions/contract-001-2026-06-17-phase-0-frozen-contracts.md`.

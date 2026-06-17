@@ -87,7 +87,7 @@ uv run ruff format --check .
 uv run mypy packages/contracts
 
 # Codegen (regenerate JSON-Schema + TS types from the pydantic source)
-uv run python -m contracts.codegen
+uv run python -m aisims_contracts.codegen
 
 # Preflight (use before saying "done" with a feature)
 uv run ruff check . && uv run mypy packages/contracts && uv run pytest
@@ -106,7 +106,7 @@ uv run ruff check . && uv run mypy packages/contracts && uv run pytest
 Do not:
 
 1. **Write code without a failing test first** (for deterministic code). Even one-line functions.
-2. **Hand-edit the generated TS / JSON-Schema artifacts** — pydantic models are the single source of truth (§4); the TS/Node types are *generated* via `python -m contracts.codegen` and gated by the CI drift check. A hand-edit produces silent py↔ts disagreement. Edit the pydantic model and regenerate.
+2. **Hand-edit the generated TS / JSON-Schema artifacts** — pydantic models are the single source of truth (§4); the TS/Node types are *generated* via `python -m aisims_contracts.codegen` and gated by the CI drift check. A hand-edit produces silent py↔ts disagreement. Edit the pydantic model and regenerate.
 3. **Add or rename a field on a frozen shared contract without mirroring it in `ARCHITECTURE.md` the same round** — a frozen contract (`ErrorEnvelope`, IPC schema, provider interfaces, `BlenderJob`/`ExportJob`, registry-entry schemas, GEOM-bytes payload, Appendix-A domain types) is imported by all tracks; an unmirrored change desyncs the cross-doc invariant. Flag the change at Step 9; the orchestrator writes the model + the `§` edit hot.
 4. **Drop or stop emitting `schemaVersion` / `registryVersion` / `contractVersion` on a persisted-or-negotiated contract** — versioned entities drive the migration runner (§13) and `/health` negotiation (§4); an unversioned contract breaks forward-migration and version negotiation.
 
@@ -118,6 +118,7 @@ be expressed as a pattern carry a `pin:` (test ref) or `accepted:` note on the r
 # rule 2 (hand-edited generated artifacts): edits under a generated TS/JSON-Schema output path  (generated|codegen)/.*\.(ts|json)$
 # rule 3 (frozen-contract field change unmirrored): pin: tests/test_arch_mirror.py  accepted: orchestrator mirrors §-section the same round
 # rule 4 (dropped version stamp): pin: tests/test_versioned_contracts.py
+# lesson 3 (frozen-contract boundary strictness): every frozen §2.5-seam model carries extra="forbid"  ConfigDict\(extra="forbid"\)
 ```
 
 <!-- ▲ END EXAMPLE BLOCK [id=forbidden-patterns] ▲ -->
@@ -130,7 +131,9 @@ Several typed models in this codebase are **contracts** mirrored in `ARCHITECTUR
 
 | Model | `ARCHITECTURE.md` section | Notes |
 |---|---|---|
-| `ErrorEnvelope` | §17 / Appendix A | code, category, retryable, creatorMessage, maintainerDetail, traceRef, suggestedAction — shared by all tracks |
+| `ErrorEnvelope` | §17 / Appendix A | code, category, retryable, creatorMessage, maintainerDetail, traceRef, suggestedAction — shared by all tracks · pin: `tests/test_error.py::test_error_envelope_schema_snapshot` |
+| IPC contract (`ipc.py`) | §4 / Appendix A | `SseEvent` discriminated union (8 events; `error` embeds `ErrorEnvelope`) · `Endpoint` (14) + request models (multi-mode runs/gate/regenerate unions) · endpoint→`ErrorCode` map (⊆ §17) · `HealthResponse(contractVersion)` · token/idempotency header conventions. Domain-independent (Q1/D15: SSE str refs + protocol enums; REST response bodies → 0.4b). Shared A↔B · pin: `tests/test_ipc.py::test_ipc_schema_snapshot` |
+| Domain model (`domain.py`) | §12 / Appendix A / `DATA_MODEL.md` | 16 entities (Project…Trace + ExportReport; 13 top-level carry `schemaVersion`, 3 embedded: StyleBible/Swatch/ExportReport) · 13 membership-pinned state `StrEnum`s (ProjectState, ItemState 19, StepState, AssetVariantState, ConceptState, MeshState+QaStatus+CleanupStatus, OverlayState, ExportState, ExportMode, Severity, ValidationScope) · structural invariants (Inv2 same-identity ref, Inv7 ≥1 swatch, variant lineage). Open-registry keys (`archetype`/`placementCategory`) stay `str` (Inv6). Inv1/Inv5 = Phase-2 pin (D16). Shared A↔B · pin: `tests/test_domain.py::test_domain_schema_snapshot` |
 
 <!-- Starts empty (or with the first model if one exists). Populated as contract models land. -->
 
@@ -142,14 +145,13 @@ This is the **shared contracts package**: pydantic v2 models are the single sour
 
 ```
 packages/contracts/
-  contracts/
-    models/        # pydantic v2 source-of-truth models (ErrorEnvelope, IPC schema, ProviderJobRef,
-                   #   provider interfaces, BlenderJob/Report, ExportJob/Report, registry entries,
-                   #   Appendix-A domain types) — each frozen contract mirrored to its ARCHITECTURE.md §
-    schema/        # JSON-Schema emission from the pydantic models
-    codegen/       # JSON-Schema → TS / Node type generation (entry: python -m contracts.codegen)
-    generated/     # codegen OUTPUT (TS/Node types) — never hand-edited (forbidden-pattern 2)
-  tests/           # unit + snapshot tests (schema snapshots, drift-gate, version-stamp pins)
+  src/aisims_contracts/  # pydantic v2 source-of-truth contracts, flat modules (one per §2.5 seam):
+                         #   error.py (ErrorEnvelope, §17) now; ipc.py / domain.py / providers.py /
+                         #   workers.py / registries.py as 0.3–0.5 land. Each mirrored to its ARCHITECTURE.md §.
+  tests/                 # unit + snapshot tests; tests/__snapshots__/ holds the checked-in JSON-Schema
+                         #   snapshots (the §2.5-seam freeze guard — a drift is the failure).
+  # JSON-Schema emission + py→ts/Node codegen (entry: python -m aisims_contracts.codegen) + a generated/
+  # output tree (never hand-edited, forbidden-pattern 2) land in 0.6 with the CI drift gate.
 ```
 
 Layer dependency direction (top depends on bottom, never reverse):
@@ -185,7 +187,11 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [§2.5-seam freeze discipline](LESSONS.md#1) | every shared contract ships a `spec(§X)` schema-snapshot same cycle; a drift IS the failure (full union + exact membership for discriminated unions) |
+| 2 | 2026-06-17 | [Enum discipline](LESSONS.md#2) | closed enums assert exact `==` membership; open-registry keys stay `str`, never enums (Inv6) |
+| 3 | 2026-06-17 | [Boundary strictness](LESSONS.md#3) | `extra="forbid"`; validate structure (enums/ranges/cardinality), not free-text content richness |
+| 4 | 2026-06-17 | [Contract scope](LESSONS.md#4) | encode state MEMBERSHIP not transitions; endpoint→ErrorCode map ⊆ §17; gates → Phase-2 pin |
+| 5 | 2026-06-17 | [§2.5-seam enum ownership](LESSONS.md#5) | one home per shared enum (import, never redefine); freeze-before-dep ⇒ str-now + mandatory pinned tighten |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

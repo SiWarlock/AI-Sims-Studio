@@ -281,11 +281,11 @@ egress (logs, traces, error envelopes).
 
 ## §17 — Error taxonomy & failure handling  *(frozen `ErrorEnvelope` contract)*
 **`ErrorEnvelope` = the 6th frozen contract:** `{code (stable enum, namespaced per stage: PROVIDER_TIMEOUT,
-PROVIDER_RATE_LIMIT, PROVIDER_AUTH/QUOTA, PROVIDER_OUTAGE, ARTIFACT_EXPIRED, MALFORMED_OUTPUT, MESH_QA_FAILED,
+PROVIDER_RATE_LIMIT, PROVIDER_AUTH_QUOTA, PROVIDER_OUTAGE, ARTIFACT_EXPIRED, MALFORMED_OUTPUT, MESH_QA_FAILED,
 GEOM_EXPORT_FAILED, DBPF_WRITE_FAILED, TEST_INSTALL_FAILED, DISK_FULL, VALIDATION_FAILED, SYSTEM…), category
 (provider|network|validation|geometry|packaging|budget|system), retryable:bool, creatorMessage,
 maintainerDetail, traceRef, suggestedAction}`. Carried in the SSE `error` event, `Step.error`, and
-`ValidationResult`; **every stage (mock+real) emits it**. **Provider error classification:** transient
+`ValidationResult`; **every stage (mock+real) emits it**. **Redaction (safety rule 5, non-droppable):** `creatorMessage` and `maintainerDetail` are free-text egress surfaces — the §16 redaction chokepoint MUST scrub them on every egress (logs / traces / SSE) before the envelope leaves the process; the 0.9 redaction impl is **pinned** to cover these two fields. **Provider error classification:** transient
 (retry/backoff) vs rate-limited (honor Retry-After, queue) vs **terminal-config** (401/402 → stop, don't burn
 retries, creator-friendly "check Settings"); defined run/item terminal state when all configured adapters are
 exhausted. **Hang/no-progress watchdog** for subprocess workers **and** cloud poll loops (wall-clock + max-
@@ -410,4 +410,4 @@ before parallel tracks fork.**
 | ConceptCandidate / MeshCandidate / AssetVariant / Swatch | §12 | see DATA_MODEL.md (+ AssetVariant state machine) | Yes (A↔B) |
 | FunctionalOverlay | §12 | sourceItemId/variantId, archetype, donorRef, tuningGraft, validationStatus, exportMode | Yes |
 | PipelineRun / Step | §12, §6 | status(8), inputs/outputs, attempts, error(ErrorEnvelope), cost?, latency | Yes |
-| ValidationResult / ExportArtifact / ReviewEvent / Trace | §12, §14 | scope/severity/message; package manifest; preference/verification events | Yes |
+| ValidationResult / ExportArtifact / ExportReport / ReviewEvent / Trace | §12, §14 | scope/severity/message; package manifest + human-readable export summary (ExportReport, embedded under ExportArtifact); preference/verification events | Yes |

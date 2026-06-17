@@ -1,0 +1,13 @@
+{
+  "name": "@aisims/contracts-codegen",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "py→ts codegen toolchain (§4) for the frozen contracts. NOT a pnpm workspace member — packages/contracts is a Python (uv) area; this package.json exists only to pin the json-schema-to-typescript emitter. Install with `pnpm install --ignore-workspace`.",
+  "scripts": {
+    "gen:ts": "node scripts/emit-ts.mjs generated/contracts.schema.json generated/contracts.ts"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "15.0.4"
+  }
+}

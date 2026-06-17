@@ -24,6 +24,12 @@ wheels = [
 name = "aisims-blender-worker"
 version = "0.0.0"
 source = { virtual = "workers/blender" }
+dependencies = [
+    { name = "aisims-contracts" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "aisims-contracts", editable = "packages/contracts" }]
 
 [[package]]
 name = "aisims-contracts"

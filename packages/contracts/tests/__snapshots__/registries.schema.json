@@ -1,0 +1,540 @@
+{
+  "DonorMapping": {
+    "additionalProperties": false,
+    "properties": {
+      "donorObjectKey": {
+        "title": "Donorobjectkey",
+        "type": "string"
+      },
+      "key": {
+        "title": "Key",
+        "type": "string"
+      },
+      "preserveKeys": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Preservekeys",
+        "type": "array"
+      },
+      "requiredResources": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Requiredresources",
+        "type": "array"
+      },
+      "tuningKeys": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Tuningkeys",
+        "type": "array"
+      }
+    },
+    "required": [
+      "key",
+      "donorObjectKey"
+    ],
+    "title": "DonorMapping",
+    "type": "object"
+  },
+  "DonorMappingRegistry": {
+    "$defs": {
+      "DonorMapping": {
+        "additionalProperties": false,
+        "properties": {
+          "donorObjectKey": {
+            "title": "Donorobjectkey",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "preserveKeys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preservekeys",
+            "type": "array"
+          },
+          "requiredResources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requiredresources",
+            "type": "array"
+          },
+          "tuningKeys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tuningkeys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "donorObjectKey"
+        ],
+        "title": "DonorMapping",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "entries": {
+        "items": {
+          "$ref": "#/$defs/DonorMapping"
+        },
+        "title": "Entries",
+        "type": "array"
+      },
+      "registryVersion": {
+        "title": "Registryversion",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "registryVersion"
+    ],
+    "title": "DonorMappingRegistry",
+    "type": "object"
+  },
+  "FunctionalArchetype": {
+    "$defs": {
+      "RuleSpec": {
+        "additionalProperties": false,
+        "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RuleSpec",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "donorRef": {
+        "title": "Donorref",
+        "type": "string"
+      },
+      "eligibilityRules": {
+        "items": {
+          "$ref": "#/$defs/RuleSpec"
+        },
+        "title": "Eligibilityrules",
+        "type": "array"
+      },
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "name": {
+        "title": "Name",
+        "type": "string"
+      },
+      "tuningGraftRules": {
+        "items": {
+          "$ref": "#/$defs/RuleSpec"
+        },
+        "title": "Tuninggraftrules",
+        "type": "array"
+      },
+      "validationRules": {
+        "items": {
+          "$ref": "#/$defs/RuleSpec"
+        },
+        "title": "Validationrules",
+        "type": "array"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "donorRef"
+    ],
+    "title": "FunctionalArchetype",
+    "type": "object"
+  },
+  "FunctionalArchetypeRegistry": {
+    "$defs": {
+      "FunctionalArchetype": {
+        "additionalProperties": false,
+        "properties": {
+          "donorRef": {
+            "title": "Donorref",
+            "type": "string"
+          },
+          "eligibilityRules": {
+            "items": {
+              "$ref": "#/$defs/RuleSpec"
+            },
+            "title": "Eligibilityrules",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "tuningGraftRules": {
+            "items": {
+              "$ref": "#/$defs/RuleSpec"
+            },
+            "title": "Tuninggraftrules",
+            "type": "array"
+          },
+          "validationRules": {
+            "items": {
+              "$ref": "#/$defs/RuleSpec"
+            },
+            "title": "Validationrules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "donorRef"
+        ],
+        "title": "FunctionalArchetype",
+        "type": "object"
+      },
+      "RuleSpec": {
+        "additionalProperties": false,
+        "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RuleSpec",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "entries": {
+        "items": {
+          "$ref": "#/$defs/FunctionalArchetype"
+        },
+        "title": "Entries",
+        "type": "array"
+      },
+      "registryVersion": {
+        "title": "Registryversion",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "registryVersion"
+    ],
+    "title": "FunctionalArchetypeRegistry",
+    "type": "object"
+  },
+  "PlacementType": {
+    "$defs": {
+      "RuleSpec": {
+        "additionalProperties": false,
+        "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RuleSpec",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "donorRef": {
+        "title": "Donorref",
+        "type": "string"
+      },
+      "footprintRules": {
+        "items": {
+          "$ref": "#/$defs/RuleSpec"
+        },
+        "title": "Footprintrules",
+        "type": "array"
+      },
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "name": {
+        "title": "Name",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "donorRef"
+    ],
+    "title": "PlacementType",
+    "type": "object"
+  },
+  "PlacementTypeRegistry": {
+    "$defs": {
+      "PlacementType": {
+        "additionalProperties": false,
+        "properties": {
+          "donorRef": {
+            "title": "Donorref",
+            "type": "string"
+          },
+          "footprintRules": {
+            "items": {
+              "$ref": "#/$defs/RuleSpec"
+            },
+            "title": "Footprintrules",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "donorRef"
+        ],
+        "title": "PlacementType",
+        "type": "object"
+      },
+      "RuleSpec": {
+        "additionalProperties": false,
+        "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RuleSpec",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "entries": {
+        "items": {
+          "$ref": "#/$defs/PlacementType"
+        },
+        "title": "Entries",
+        "type": "array"
+      },
+      "registryVersion": {
+        "title": "Registryversion",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "registryVersion"
+    ],
+    "title": "PlacementTypeRegistry",
+    "type": "object"
+  },
+  "RegistryFinding": {
+    "$defs": {
+      "ErrorCategory": {
+        "description": "Closed coarse error-category set (\u00a717) \u2014 the routing/telemetry grouping for a code.",
+        "enum": [
+          "provider",
+          "network",
+          "validation",
+          "geometry",
+          "packaging",
+          "budget",
+          "system"
+        ],
+        "title": "ErrorCategory",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Closed, stable per-stage error code set (\u00a717).\n\nWithin-version PRODUCER contract: the sidecar emits only these codes; an out-of-enum\nvalue is rejected at the boundary (deterministic validation, safety rule 6).\n\nCONSUMERS (the 0.6 TS codegen type + engine/UI switch logic) MUST treat any unrecognized\ncode as ``SYSTEM`` for forward compatibility, so a future additive split is non-breaking;\nthat tolerance is tested where consumers live, not here.\n\n``PROVIDER_AUTH_QUOTA`` groups auth (401) and quota/billing (402); the 401-vs-402\ndistinction is preserved in ``ErrorEnvelope.maintainerDetail`` at emit time.",
+        "enum": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_RATE_LIMIT",
+          "PROVIDER_AUTH_QUOTA",
+          "PROVIDER_OUTAGE",
+          "ARTIFACT_EXPIRED",
+          "MALFORMED_OUTPUT",
+          "MESH_QA_FAILED",
+          "GEOM_EXPORT_FAILED",
+          "DBPF_WRITE_FAILED",
+          "TEST_INSTALL_FAILED",
+          "DISK_FULL",
+          "VALIDATION_FAILED",
+          "SYSTEM"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Frozen error contract (\u00a717, \u00a74): SSE ``error``, ``Step.error``, ``ValidationResult``.\n\nField names are camelCase to match the JSON/TS wire form (\u00a74) \u2014 no alias indirection.\n``extra=\"forbid\"`` rejects unknown fields at the boundary (frozen \u00a72.5-seam, safety rule 6).",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/ErrorCategory"
+          },
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "creatorMessage": {
+            "title": "Creatormessage",
+            "type": "string"
+          },
+          "maintainerDetail": {
+            "title": "Maintainerdetail",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "suggestedAction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggestedaction"
+          },
+          "traceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Traceref"
+          }
+        },
+        "required": [
+          "code",
+          "category",
+          "retryable",
+          "creatorMessage",
+          "maintainerDetail"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "RegistryIssue": {
+        "description": "The closed set of load-time registry issues (structural only \u2014 Q2 scope).",
+        "enum": [
+          "missing-version",
+          "duplicate-key",
+          "malformed-entry"
+        ],
+        "title": "RegistryIssue",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "A load-time registry validation finding: a granular registry-local ``issue`` + the \u00a717\n``ErrorEnvelope`` (so the 0.7 store loader surfaces it through the standard error channel);\n``entryKey`` names the offending entry where applicable.",
+    "properties": {
+      "entryKey": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Entrykey"
+      },
+      "error": {
+        "$ref": "#/$defs/ErrorEnvelope"
+      },
+      "issue": {
+        "$ref": "#/$defs/RegistryIssue"
+      }
+    },
+    "required": [
+      "issue",
+      "error"
+    ],
+    "title": "RegistryFinding",
+    "type": "object"
+  },
+  "RuleSpec": {
+    "additionalProperties": false,
+    "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
+    "properties": {
+      "kind": {
+        "title": "Kind",
+        "type": "string"
+      },
+      "params": {
+        "additionalProperties": true,
+        "title": "Params",
+        "type": "object"
+      }
+    },
+    "required": [
+      "kind"
+    ],
+    "title": "RuleSpec",
+    "type": "object"
+  }
+}

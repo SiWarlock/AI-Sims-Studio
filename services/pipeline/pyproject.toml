@@ -1,0 +1,28 @@
+[project]
+name = "aisims-pipeline"
+version = "0.0.0"
+description = "AI Sims Creator pipeline sidecar (FastAPI + LangGraph) — Phase-0 skeleton."
+requires-python = ">=3.13,<3.14"
+dependencies = []
+# Postgres + pgvector are bundled at deploy/packaging time (§19, Phase 10), not a Python
+# dependency here. The sidecar is the SOLE writer of Postgres + the canonical artifact tree.
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+explicit_package_bases = true
+files = ["graph", "engine", "adapters", "registries", "store", "obs", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

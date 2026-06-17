@@ -1,0 +1,41 @@
+# uv workspace root (virtual — not itself a built package).
+# The Node/TS areas (apps/desktop, workers/export) live in the pnpm workspace
+# (./pnpm-workspace.yaml), not here.
+[project]
+name = "aisims-studio"
+version = "0.0.0"
+description = "AI Sims Creator — monorepo root (uv workspace for the Python areas)."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    # The only built/installable Python member; installs editable into the shared venv
+    # so every area can import the frozen contracts. Pipeline/blender/evals are virtual
+    # skeletons (package = false) and run their tests via pytest pythonpath.
+    "aisims-contracts",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+aisims-contracts = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+    "packages/contracts",
+    "services/pipeline",
+    "workers/blender",
+    "evals",
+]
+
+[dependency-groups]
+# Shared strict-typing toolchain for all Python areas (one shared workspace venv).
+dev = [
+    "mypy>=1.13",
+    "ruff>=0.8",
+    "pytest>=8.3",
+    # Git-hook runner: regenerates machine-valid pre-commit + commit-msg hooks
+    # (replaces stale cross-machine residue) and gates ruff/mypy/conventional-commits.
+    # See ./.pre-commit-config.yaml. Install: uv run pre-commit install
+    #   --hook-type pre-commit --hook-type commit-msg
+    "pre-commit>=4",
+]

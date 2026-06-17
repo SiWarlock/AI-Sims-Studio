@@ -1,0 +1,34 @@
+[project]
+name = "aisims-contracts"
+version = "0.0.0"
+description = "Shared frozen contracts for AI Sims Creator — pydantic v2 single source of truth (§2.5, §4)."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pydantic>=2.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aisims_contracts"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+# No pep8-naming (N): frozen contract fields are camelCase to match the JSON/TS wire form (§4).
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+explicit_package_bases = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

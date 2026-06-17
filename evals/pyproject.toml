@@ -1,0 +1,27 @@
+[project]
+name = "aisims-evals"
+version = "0.0.0"
+description = "AI Sims Creator eval harnesses (LangSmith-native + metric layer) — Phase-0 skeleton."
+requires-python = ">=3.13,<3.14"
+dependencies = []
+# Heavy eval deps (LangSmith SDK, trimesh/Open3D/torchmetrics/IQA-PyTorch, syrupy) land
+# with the eval harnesses, not in the Phase-0 skeleton.
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

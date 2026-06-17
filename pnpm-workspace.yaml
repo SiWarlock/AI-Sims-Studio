@@ -1,0 +1,10 @@
+# pnpm workspace — the two Node/TS code areas (§2.5).
+# Python areas (packages/contracts, services/pipeline, workers/blender, evals)
+# are a separate uv workspace, rooted at ./pyproject.toml.
+packages:
+  - "apps/desktop"
+  - "workers/export"
+# esbuild (a Vitest dependency) ships a prebuilt native binary and needs its install
+# script approved so Vitest can run. Add entries here as real build-script deps appear.
+allowBuilds:
+  esbuild: true

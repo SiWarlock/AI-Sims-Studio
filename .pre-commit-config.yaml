@@ -1,0 +1,74 @@
+# Pre-commit hooks for AI Sims Creator (repo-root; shared by every track/worktree).
+#
+# Regenerate machine-valid git hooks (replaces the stale cross-machine residue that
+# hardcoded another machine's pyenv and blocked all commits):
+#   uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+#
+# Every hook is a LOCAL `language: system` hook driven by the project's own pinned
+# toolchain via `uv run` — so results match /preflight exactly (same ruff/mypy version
+# + per-area config) and need no network at commit time. Each area owns its [tool.mypy];
+# the per-area mypy hooks fire only when that area's files are staged.
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: ruff (lint)
+        entry: uv run ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff (format check)
+        entry: uv run ruff format --check
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: mypy-contracts
+        name: mypy --strict (packages/contracts)
+        entry: bash -c 'cd packages/contracts && exec uv run mypy'
+        language: system
+        files: ^packages/contracts/.*\.py$
+        pass_filenames: false
+        require_serial: true
+
+      - id: mypy-pipeline
+        name: mypy --strict (services/pipeline)
+        entry: bash -c 'cd services/pipeline && exec uv run mypy'
+        language: system
+        files: ^services/pipeline/.*\.py$
+        pass_filenames: false
+        require_serial: true
+
+      - id: mypy-blender
+        name: mypy --strict (workers/blender)
+        entry: bash -c 'cd workers/blender && exec uv run mypy'
+        language: system
+        files: ^workers/blender/.*\.py$
+        pass_filenames: false
+        require_serial: true
+
+      - id: mypy-evals
+        name: mypy --strict (evals)
+        entry: bash -c 'cd evals && exec uv run mypy'
+        language: system
+        files: ^evals/.*\.py$
+        pass_filenames: false
+        require_serial: true
+
+      # Conventional Commits subject check (offline; no external hook repo to fetch).
+      # pre-commit appends the commit-message file as the sole arg → it lands in $0
+      # (bash -c '<script>' <file>: the file occupies the $0/arg0 slot, not $1).
+      # WARNING: do NOT add args after the script string (e.g. a trailing `--`) — that
+      # shifts the file onto $1 and silently breaks the check. Keep `"$0"` in sync.
+      # Literal block scalar (|-) so the regex backslashes/quotes/colon survive YAML.
+      - id: conventional-commit-msg
+        name: Conventional Commits (commit subject)
+        entry: |-
+          bash -c 'head -n1 "$0" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]+\))?!?: .+" || { echo "ERROR: commit subject must follow Conventional Commits — <type>(<scope>): <description>"; exit 1; }'
+        language: system
+        stages: [commit-msg]
+        always_run: true

@@ -3,12 +3,27 @@ name = "aisims-pipeline"
 version = "0.0.0"
 description = "AI Sims Creator pipeline sidecar (FastAPI + LangGraph) — Phase-0 skeleton."
 requires-python = ">=3.13,<3.14"
-dependencies = []
-# Postgres + pgvector are bundled at deploy/packaging time (§19, Phase 10), not a Python
-# dependency here. The sidecar is the SOLE writer of Postgres + the canonical artifact tree.
+dependencies = [
+    # Frozen cross-process contracts (§2.5) — the store persists these domain entities.
+    "aisims-contracts",
+    # §13 store: SQLAlchemy 2.0 async ORM + Alembic migrations.
+    "sqlalchemy[asyncio]>=2.0",
+    "alembic>=1.13",
+    # Async DB drivers: asyncpg = the Postgres prod target; aiosqlite backs the
+    # deterministic unit-test layer (JSONB degrades to JSON via with_variant, store/db.py).
+    "asyncpg>=0.29",
+    "aiosqlite>=0.20",
+    "pydantic>=2",
+]
+# The Postgres *server* + pgvector are bundled at deploy/packaging time (§19, Phase 10);
+# asyncpg/SQLAlchemy here are the client. The sidecar is the SOLE writer of Postgres +
+# the canonical artifact tree (rule 3).
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+aisims-contracts = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -22,6 +37,14 @@ python_version = "3.13"
 strict = true
 explicit_package_bases = true
 files = ["graph", "engine", "adapters", "registries", "store", "obs", "tests"]
+
+# The frozen contracts package ships no py.typed marker yet (FINDING, flagged to the
+# orchestrator for a packages/contracts fix). Its editable source IS present, so follow
+# the import to get REAL types at the contract boundary rather than Any. Remove this
+# override once packages/contracts ships py.typed.
+[[tool.mypy.overrides]]
+module = "aisims_contracts.*"
+follow_untyped_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

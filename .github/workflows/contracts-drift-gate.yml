@@ -1,0 +1,51 @@
+# §4 py↔ts codegen drift gate — fails when the generated TS is out of sync with the pydantic source.
+# Minimal, single-purpose (per the 0.6 scope): this realizes the §4 CI-gate requirement only; holistic
+# per-area lint/type/test CI lands later. The repo's first workflow.
+name: contracts drift gate
+
+on:
+  pull_request:
+    paths:
+      - "packages/contracts/**"
+  push:
+    branches: [main]
+    paths:
+      - "packages/contracts/**"
+
+jobs:
+  drift-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+
+      # Shared dev toolchain (mypy/ruff/pytest) lives in the ROOT dependency-group — sync from the
+      # workspace root, NOT a member dir (a member-dir `uv sync` prunes the shared dev group).
+      - name: Sync Python workspace (root)
+        run: uv sync --all-packages
+
+      - name: Install the codegen emitter (standalone — contracts is not a pnpm member)
+        working-directory: packages/contracts
+        run: pnpm install --ignore-workspace
+
+      - name: Drift gate — generated TS in sync with the pydantic source
+        working-directory: packages/contracts
+        run: uv run python -m aisims_contracts.codegen --check
+
+      # Guard: the node-coupled TS tests skipif the emitter is missing — fail loudly in CI instead
+      # of silently skipping (so a broken install can't pass the gate).
+      - name: Assert the codegen emitter is installed (no silent test skips)
+        working-directory: packages/contracts
+        run: test -d node_modules/json-schema-to-typescript
+
+      - name: Contracts tests
+        working-directory: packages/contracts
+        run: uv run pytest

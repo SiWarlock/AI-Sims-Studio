@@ -5,8 +5,8 @@
   "generatedFromRef": "main",
   "generatorModel": "claude-opus-4-8",
   "generatedAt": "2026-06-16T00:00:00Z",
-  "lastUpgradedFromSha": null,
-  "lastUpgradedAt": null,
+  "lastUpgradedFromSha": "7f60f2514b81bffc2ce1c35f4ed0b664a516b7e8",
+  "lastUpgradedAt": "2026-06-17T03:31:08Z",
   "mode": "team",
   "posture": "production-grade",
   "track": null,
@@ -422,6 +422,11 @@
     {
       "dest": ".scaffolding/README.md",
       "template": "templates/.scaffolding/README.md",
+      "kind": "verbatim"
+    },
+    {
+      "dest": "scripts/hooks/team-event-log.sh",
+      "template": "templates/scripts/hooks/team-event-log.sh",
       "kind": "verbatim"
     }
   ],

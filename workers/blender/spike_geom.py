@@ -20,22 +20,35 @@ point the env-ready probe invokes. Headless tests inject fake runners instead.
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Final, Protocol
 
 from aisims_contracts.error import ErrorCategory, ErrorCode, ErrorEnvelope
 from aisims_contracts.workers import BlenderJob, BlenderJobStatus, BlenderReport, GateMetrics
 from pydantic import ValidationError
 
-from geom.structural import validate_geom_structure
+from geom.real_geom import validate_real_geom
+from geom.structural import GeomStructResult, validate_geom_structure
+
+# The structural-GEOM validator seam: the spike default is the placeholder parser; the env-ready
+# path (real Blender output) injects the real-format `validate_real_geom`.
+GeomValidator = Callable[[bytes], GeomStructResult]
 
 _DEFAULT_DEADLINE_S: float = 600.0
-# The env-ready bpy script `blender --background` runs (lands with Blender 5.1.x provisioning).
-_DEFAULT_SCRIPT = "cli/geom_export.py"
+# The bpy GEOM-emission script `blender --background` runs. Lives in `blender_scripts/` (the bpy-
+# runtime-script home) — it runs under Blender's bundled Python, not the worker uv env, so it is NOT
+# part of the worker import graph (and is mypy-excluded).
+_DEFAULT_SCRIPT = "blender_scripts/geom_export.py"
 _MAX_RETRIES = 1
+# `blender` is not on PATH on this Apple-Silicon Mac; the app-bundle binary is the fallback.
+# SPIKE convenience only — machine-specific; Phase-4 productionization replaces it with real config.
+_MAC_APP_BIN: Final = Path("/Applications/Blender.app/Contents/MacOS/Blender")
+_BLENDER_BIN_ENV: Final = "AISIMS_BLENDER_BIN"
 # Reject a worker-controlled GEOM file larger than this before reading it into memory (the §8 fast
 # check only needs the header + declared body; an oversized .geom is a malformed-worker signal, not
 # a valid mesh). Guards the harness against an OOM from an untrusted in-scratch file.
@@ -58,9 +71,23 @@ class Runner(Protocol):
     def run(self, cmd: list[str], deadline_s: float) -> RunResult: ...
 
 
-def build_blender_command(script: str, jobfile: str) -> list[str]:
-    """The §8 production invocation: ``--factory-startup`` isolation + the job-file after ``--``."""
-    return ["blender", "--background", "--factory-startup", "--python", script, "--", jobfile]
+def build_blender_command(script: str, jobfile: str, *, blender_exe: str = "blender") -> list[str]:
+    """The §8 production invocation: the (configurable) Blender executable + ``--factory-startup``
+    isolation + the job-file after ``--``. ``blender_exe`` defaults to ``"blender"``; the real
+    runner overrides it — see :func:`_resolve_blender_exe`."""
+    return [blender_exe, "--background", "--factory-startup", "--python", script, "--", jobfile]
+
+
+def _resolve_blender_exe(app_fallback: Path = _MAC_APP_BIN) -> str:
+    """Resolve the Blender executable with explicit precedence: the ``AISIMS_BLENDER_BIN`` env var
+    wins over the app-bundle fallback wins over a bare ``"blender"`` on PATH. The fallback never
+    masks an explicit override (so a misconfigured machine fails loudly, not silently wrong)."""
+    env = os.environ.get(_BLENDER_BIN_ENV)
+    if env:
+        return env
+    if app_fallback.exists():
+        return str(app_fallback)
+    return "blender"
 
 
 def run_geom_spike(
@@ -71,6 +98,7 @@ def run_geom_spike(
     *,
     script: str = _DEFAULT_SCRIPT,
     max_retries: int = _MAX_RETRIES,
+    validator: GeomValidator = validate_geom_structure,
 ) -> BlenderReport:
     """Run the GEOM spike: serialize the job into scratch, invoke the runner under the §17 watchdog
     (kill + retry-once on a deadline breach), validate the emitted GEOM, and assemble a
@@ -79,7 +107,7 @@ def run_geom_spike(
     scratch_dir.mkdir(parents=True, exist_ok=True)
     jobfile = scratch_dir / f"{job.jobId}.job.json"
     jobfile.write_text(job.model_dump_json())
-    cmd = build_blender_command(script, str(jobfile))
+    cmd = build_blender_command(script, str(jobfile), blender_exe=_resolve_blender_exe())
 
     timed_out = True
     for _ in range(max_retries + 1):
@@ -94,10 +122,10 @@ def run_geom_spike(
             creator="The mesh export timed out.",
         )
 
-    return _assemble_report(job, scratch_dir)
+    return _assemble_report(job, scratch_dir, validator)
 
 
-def _assemble_report(job: BlenderJob, scratch_dir: Path) -> BlenderReport:
+def _assemble_report(job: BlenderJob, scratch_dir: Path, validator: GeomValidator) -> BlenderReport:
     """Read the worker's result-file from scratch and map it onto a contract-valid BlenderReport,
     gating on the §8 structural GEOM check before declaring success."""
     result_file = scratch_dir / f"{job.jobId}.result.json"
@@ -125,7 +153,7 @@ def _assemble_report(job: BlenderJob, scratch_dir: Path) -> BlenderReport:
     geom_size = resolved.stat().st_size
     if geom_size > _MAX_GEOM_BYTES:
         return _failed(f"emitted GEOM exceeds the {_MAX_GEOM_BYTES}-byte cap: {geom_size}")
-    struct_res = validate_geom_structure(resolved.read_bytes())
+    struct_res = validator(resolved.read_bytes())
     if not struct_res.ok:
         kinds = ", ".join(issue.kind for issue in struct_res.issues)
         return _failed(f"emitted GEOM failed the §8 structural check: {kinds}")
@@ -202,29 +230,64 @@ def _resolve_within_scratch(scratch_dir: Path, ref: str) -> Path | None:
     return resolved
 
 
-class _SubprocessRunner:  # pragma: no cover - exercised only at env-ready (real Blender)
-    """Production runner — wraps the ``blender --background`` subprocess with the §17 wall-clock
-    watchdog. Its actual Blender invocation runs only at env-ready (Blender 5.1.x); full
-    process-tree kill is an env-ready hardening detail. Headless tests inject fakes instead."""
+class _SubprocessRunner:
+    """Production runner — runs the (resolved) ``blender --background`` subprocess and enforces the
+    §17 wall-clock watchdog with a process-**tree** kill: ``start_new_session=True`` makes the child
+    lead a fresh process group, so on a deadline breach one ``killpg`` reaps Blender + any
+    grandchildren it spawned (not just the direct child). Tests drive it with non-Blender commands;
+    the real Blender invocation is the env-ready probe path."""
 
     def run(self, cmd: list[str], deadline_s: float) -> RunResult:
+        proc = subprocess.Popen(cmd, start_new_session=True)
         try:
-            proc = subprocess.run(cmd, timeout=deadline_s, check=False)
+            proc.wait(timeout=deadline_s)
         except subprocess.TimeoutExpired:
+            self._kill_tree(proc)
             return RunResult(timed_out=True, returncode=-1)
         return RunResult(timed_out=False, returncode=proc.returncode)
 
+    @staticmethod
+    def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            proc.kill()  # fall back to a direct-child kill if the group is already gone
+        try:
+            proc.wait(timeout=5.0)
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def run_geom_spike_from_jobfile(
+    jobfile: Path,
+    runner: Runner,
+    scratch_dir: Path | None = None,
+    deadline_s: float = _DEFAULT_DEADLINE_S,
+) -> BlenderReport:
+    """Read + validate an inbound job-file, then run the spike — **fail-closed**: a missing /
+    unreadable / malformed job-file (bad JSON or failing ``BlenderJob`` validation) returns a failed
+    ``BlenderReport`` and never spawns a subprocess (rule-6 inbound validation before any state
+    change). ``scratch_dir`` defaults to the job-file's parent dir."""
+    scratch = scratch_dir if scratch_dir is not None else jobfile.parent
+    try:
+        job = BlenderJob.model_validate_json(jobfile.read_text())
+    except (OSError, ValueError, ValidationError) as exc:
+        return _failed(
+            f"unreadable / malformed inbound job-file {jobfile}: {exc!r}",
+            creator="The mesh export job could not be read.",
+        )
+    # The env-ready entry runs real Blender → validate emitted bytes with the REAL-format parser.
+    return run_geom_spike(job, runner, scratch, deadline_s, validator=validate_real_geom)
+
 
 def _run_cli(argv: Sequence[str]) -> int:  # pragma: no cover - env-ready probe entry point
-    """Env-ready probe entry: read a job-file path → run the spike → write the result/report file.
+    """Env-ready probe entry: read a job-file path → run the spike (fail-closed) → write the report.
     This is what the S1a env-ready real-Blender probe and S1c's test-install consume."""
     if len(argv) < 2:
         return 2
     jobfile = Path(argv[1])
-    scratch = jobfile.parent
-    job = BlenderJob.model_validate_json(jobfile.read_text())
-    report = run_geom_spike(job, _SubprocessRunner(), scratch)
-    (scratch / f"{job.jobId}.report.json").write_text(report.model_dump_json())
+    report = run_geom_spike_from_jobfile(jobfile, _SubprocessRunner(), jobfile.parent)
+    (jobfile.parent / f"{jobfile.stem}.report.json").write_text(report.model_dump_json())
     return 0 if report.status is BlenderJobStatus.SUCCEEDED else 1
 
 

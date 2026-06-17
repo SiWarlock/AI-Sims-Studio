@@ -135,6 +135,12 @@ attacks, §16). **`contractVersion`** negotiated at `/health`. Surfaces:
 - **Cancel:** `DELETE /jobs/{id}` flips a cooperative cancel flag (see §17 cancel semantics).
 **py↔ts sync (frozen guarantee):** pydantic models are the single source → JSON Schema → generated TS (UI) +
 Node (worker) types; **CI drift gate** fails on divergence. All persisted entities carry `schemaVersion`.
+**0.6 codegen (`python -m aisims_contracts.codegen`):** `models_json_schema` aggregates all 7 contracts → one
+combined `$defs` → `json-schema-to-typescript` (pinned 15.0.4) emits `packages/contracts/generated/{contracts.ts,
+helpers.ts}`, **deterministic** (fixed banner, sorted keys, no timestamps). `--check` (the pure-Python primary
+gate) + a GitHub Actions job enforce drift; generated artifacts are committed + **never hand-edited** (the gate
+enforces, forbidden-pattern 2). `ErrorCode` ships a `parseErrorCode→SYSTEM` tolerant-consumer helper. `packages/
+contracts` carries a standalone `package.json` for the emitter (`pnpm install --ignore-workspace`).
 
 ## §5 — Pipeline orchestration (LangGraph)
 `StateGraph`, one node/subgraph per stage; typed `State` (a pydantic model, reconciled with Appendix-A domain

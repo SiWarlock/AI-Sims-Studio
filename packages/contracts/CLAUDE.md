@@ -202,6 +202,8 @@ Lessons start at §1.
 | 9 | 2026-06-17 | [Worker-report safety shaping](LESSONS.md#9) | worker reports carry scratch-path `str` refs (`min_length=1`, never inline bytes — rule 3) + a status↔outputs `model_validator` rejects malformed reports at the boundary (rule 6); within-model invariants belong in the contract, cross-entity gates don't |
 | 10 | 2026-06-17 | [Registry envelope frozen / grammar flexible](LESSONS.md#10) | freeze a registry's entry envelope + a flexible `RuleSpec{kind,params}` rule rep; defer the rule *grammar* to the spike that pins it (S3) — over-specifying ahead is the open-seam regression (sibling to Lessons 2/7) |
 | 11 | 2026-06-17 | [Pure validator function in a contracts package](LESSONS.md#11) | a contracts package may ship a deterministic validator (`validate_registry`) TDD'd with good/bad fixtures, distinct from the snapshot; take raw data in (construction failures → findings); return granular local `issue` + embedded `ErrorEnvelope`; pure + scope-bounded |
+| 12 | 2026-06-17 | [Deterministic codegen + committed artifacts](LESSONS.md#12) | commit generated output as the drift gate's diff target (never hand-edit, fp-2); codegen must be deterministic (fixed banner, sorted keys, no timestamps) or `--check` false-positives; a gate VERIFIES (`--check`), never mutates |
+| 13 | 2026-06-17 | [Strict-producer / tolerant-consumer enum](LESSONS.md#13) | a forward-compatible wire enum is strict on the producer (closed + exact membership) + tolerant on the consumer (unknown→safe default via a generated parse helper) so an additive split is non-breaking (`ErrorCode`→`SYSTEM`) |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

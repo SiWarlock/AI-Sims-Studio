@@ -25,38 +25,36 @@
 
 ## Currently in progress
 
-**Phase 0 — contract track (8 slices landed: 0.1–0.4b + 0.5a/b/c). 🏁 ALL §2.5 CONTRACTS FROZEN.** 0.1 (scaffold)
-+ 0.2 (ErrorEnvelope) + 0.3 (IPC) + 0.4a (domain) **SEALED** in round 1 at `d1aa05b` (pushed to origin/track/contract).
-**Round 2 (unpushed):** 0.4b (IPC completion) `35f1a2e`+`7d701a6`; 0.5a (providers §7) `de7caee`; 0.5b (workers
-§8/§9) `ccce712`; 0.5c (registries §11) `818024d`. The frozen §2.5-seam family is now complete — error/ipc/responses/
-domain/providers/workers/registries, each with a `spec(§X)` snapshot. 62 contracts tests green; `mypy --strict` clean.
-**Orchestrator round-2 docs accumulating uncommitted** (this reconcile + briefs `contract-004…007` + the
-IPC/responses/providers/workers/registries cross-doc rows + §4/§7/§9/§11/Appendix-A notes incl. `ExportJobReport`
-disambiguation + `eligibilityPredicate`→`eligibilityRules` + Lessons 6–11 + 4 carry-forwards) — landing now in the
-`/orchestrate-end` round commit + **push to origin/track/contract** (lead-authorized **D18** — a milestone
-CHECKPOINT that backs up Round-2 + makes the frozen contracts AVAILABLE on origin; **NOT** the fork-unblocking
-integration merge).
+**Phase 0 — contract track (9 slices landed: 0.1–0.6). 🏁 §2.5 CONTRACTS FROZEN + codegen live.** Round 1 (0.1–0.4a)
+**SEALED + pushed** `d1aa05b`. Round 2 (0.4b–0.5c) **SEALED + pushed** at `0f78259` (D18 checkpoint) — the §2.5-seam
+family complete (error/ipc/responses/domain/providers/workers/registries), each `spec(§X)`-snapshotted. **Round 3
+(unpushed):** 0.6 (py↔ts codegen + CI drift gate, §4) **LANDED** — C1 `033e25f` (codegen: `models_json_schema` → combined
+`$defs` → `json-schema-to-typescript` → `generated/{contracts.ts, helpers.ts}`, deterministic; `--check` gate) + C2
+`ee51b24` (the repo's FIRST CI workflow — GH Actions contracts-drift gate, D20). Plus 2 tooling fixes: `93b9a3e` (D19
+`/preflight` `uv sync --all-packages`) + `99bc955` (the `/preflight` codegen step → `aisims_contracts.codegen --check`).
+70 contracts tests green; `mypy --strict` clean. **Orchestrator round-3 docs accumulating uncommitted** (this reconcile
++ brief `contract-008` + the §4 codegen-toolchain arch-note + Lessons 12–13 + the carry-forward resolutions) for the
+next `/orchestrate-end` round commit + push.
 
-**Next session target:** **round close-out IN PROGRESS** (lead-authorized **D18** — milestone checkpoint, NOT a
-context cycle: impl `/session-end` Round-2 doc + orch `/orchestrate-end` doc-round commit + push; SAME teammates
-continue, no respawn). ⏳ **PENDING cross-track decision — when the other 6 tracks fork:** the push is a checkpoint,
-not fork-unblocking; the tracks formally fork only after THIS track finishes Phase 0 (0.6 codegen → 0.9; **codegen
-gates the TS-consuming ui/workers tracks**) + merges to integration. That timing is **DEFERRED to Phase-0 exit /
-user return (D18)** — do NOT merge to main/integration or declare parallelization unblocked now. Next slice after
-close-out: `0.6` (py↔ts codegen + CI drift gate, §4) — consumes every `*.schema.json`; tooling, not a §2.5 model.
-Then 0.7 (store) – 0.9, then `/phase-exit 0`. Inv1 (full exportability gate) + Inv5 (ordered approval gates) remain
-PINNED non-droppable **Phase-2** safety items (D16). (0.5 was decomposed → 0.5a/0.5b/0.5c.)
+**Next session target:** `0.7` (Postgres store skeleton + Alembic + versioning, §13) — depends on 0.4 (landed),
+unblocked. Repository layer (sidecar = sole writer, safety rule 3), Alembic baseline, data-dir version stamp + startup
+compat check, `schemaVersion`/`registryVersion` stamps, write-bytes-then-commit-row artifact ordering. First
+services/pipeline-area slice. Then 0.8 (mock framework) → 0.9 (supervisor/obs — carries the PINNED ErrorEnvelope
+redaction safety item), then `/phase-exit 0`. ⏳ **PENDING at Phase-0 exit:** P4 (the 6-track fork-timing — the push is
+a checkpoint, NOT fork-unblocking; tracks fork after this track's Phase 0 + integration merge) + the deferred holistic
+CI (D20) return to the lead/user. Inv1 (full exportability gate) + Inv5 (ordered approval gates) remain PINNED
+non-droppable **Phase-2** safety items (D16). (0.5 was decomposed → 0.5a/0.5b/0.5c.)
 
 ---
 
 ## Carry-forward to upcoming briefs
 
-- **ErrorEnvelope `code` consumer-tolerance (origin: 2026-06-17 · 0.2 / D10b).** UI SSE/IPC deserialization + the 0.6 TS codegen type MUST degrade gracefully on an unrecognized `code` → map to `SYSTEM`, so a future additive enum split (e.g. `PROVIDER_AUTH` + `PROVIDER_QUOTA`) is non-breaking. The 0.2 producer model stays a STRICT closed enum (RED #4 + `extra="forbid"`); tolerance lives in CONSUMERS. **Last-consumer-slice: 0.6** (codegen) + Phase 7 (UI deserialization). Strict model + tolerant consumers = the production-grade combo.
+- **ErrorEnvelope `code` consumer-tolerance (origin: 2026-06-17 · 0.2 / D10b).** UI SSE/IPC deserialization + the 0.6 TS codegen type MUST degrade gracefully on an unrecognized `code` → map to `SYSTEM`, so a future additive enum split (e.g. `PROVIDER_AUTH` + `PROVIDER_QUOTA`) is non-breaking. The 0.2 producer model stays a STRICT closed enum (RED #4 + `extra="forbid"`); tolerance lives in CONSUMERS. **0.6 codegen part DONE** (`parseErrorCode(x)→SYSTEM` helper emitted in `generated/helpers.ts`, Lesson 13); **remaining: Phase-7 UI Zod-boundary wiring** (the UI calls `parseErrorCode` at deserialization). **Last-consumer-slice: Phase 7.** Strict model + tolerant consumers = the production-grade combo.
 - **⚠ SAFETY-TRACKED (rule 5, non-droppable) — ErrorEnvelope redaction-egress (origin: 2026-06-17 · 0.2).** `creatorMessage` + `maintainerDetail` are free-text PII/secret-bearing egress surfaces — the §16 redaction chokepoint / §14 tracing MUST scrub them before any logs/traces/SSE egress. Marked at the model via inline code comment + anchored in `ARCHITECTURE.md §17`. **Encoded as a PINNED, non-waivable acceptance bullet in task 0.9** (the obs/redaction seam) — the redaction impl cannot ship without a test covering both fields. **Last-consumer-slice: 0.9.**
-- **ErrorEnvelope JSON-Schema field titles (origin: 2026-06-17 · 0.2).** pydantic auto-derives schema `title`s from field names (`creatorMessage` → "Creatormessage"); these bake into the snapshot and surface in the 0.6 TS-codegen JSDoc. Set proper `Field(title=…)` (or handle in codegen) in **0.6** so generated consumer types read well — deferred to avoid churning the 0.2 freeze snapshot.
 - **`GateKind` import-DAG / relocation (origin: 2026-06-17 · 0.4b / Q5 / D15).** 0.4b made the `ipc → domain` import edge live (the 4 SSE fields tightened to domain enums). `GateKind` stays single-homed in `ipc.py` (no domain consumer yet; guarded by `test_gatekind_single_definition`). When a **Phase-2 domain gate model** needs `GateKind`, importing it from `ipc` would close an `ipc ↔ domain` cycle → **relocate `GateKind` to `domain.py` (or a neutral shared-enums module) then**, never import upward. `test_import_direction` mechanically pins the acyclic DAG (`error←domain←ipc←responses`), so the cycle can't land silently. **Last-consumer-slice: Phase-2 (the slice that adds a domain gate model).** (Lesson 5/6.)
 - **`StructuredT` TypeVar package-export (origin: 2026-06-17 · 0.5a).** `LLMProvider.structured`'s `StructuredT` (TypeVar bound=BaseModel) is importable from `aisims_contracts.providers` but is NOT in the package `__all__`. Decide package-level export when **0.8** mock adapters implement `LLMProvider.structured` (an adapter conforming to the Protocol doesn't strictly need it exported). **Last-consumer-slice: 0.8.**
-- **Snapshot-test hardening back-port (origin: 2026-06-17 · 0.5b).** 0.5b added two guards worth back-porting: (1) `min_length=1` on path/ref `str` fields (an empty-string ref passes a None-check but isn't a usable path — applies to providers `urls`/refs + domain path fields `imagePath`/`meshPath`/`outputPath`/… + registry `id`/`key`/`name`, 0.5c); (2) the explicit value-model-SET assertion in the snapshot test (`set(models)==expected` — catches a silently-dropped model before a blind regen). Apply to `test_providers.py` + `test_domain.py` in a hardening pass. **Last-consumer-slice: 0.6** (before codegen consumes the snapshots).
+- **Snapshot-test hardening back-port (origin: 2026-06-17 · 0.5b).** 0.5b added two guards worth back-porting: (1) `min_length=1` on path/ref `str` fields (an empty-string ref passes a None-check but isn't a usable path — applies to providers `urls`/refs + domain path fields `imagePath`/`meshPath`/`outputPath`/… + registry `id`/`key`/`name`, 0.5c); (2) the explicit value-model-SET assertion in the snapshot test (`set(models)==expected` — catches a silently-dropped model before a blind regen). Apply to `test_providers.py` + `test_domain.py` (+ registries) in a hardening pass. **OWN dedicated micro-slice** — NOT folded into 0.6 (impl's bisectability call: (1) is a *contract* change that re-freezes 3 frozen snapshots; mixing it into a tooling slice muddies bisectability). Schedule as a standalone slice (before/with 0.7). **Last-consumer-slice: own slice (TBD).**
+- **Deferred holistic CI build-out (origin: 2026-06-17 · 0.6 / D20).** 0.6 lands ONLY the minimal GitHub Actions contracts-drift job (`codegen --check` + pytest). The full CI — **per-area lint/type/test jobs for all 6 areas** (apps/desktop · services/pipeline · workers/blender · workers/export · packages/contracts · evals; root `uv sync --all-packages` per D19) — is DEFERRED to a **Phase-0-exit or dedicated infra slice**; pairs with **P4** (the 6-track fork-timing) as Phase-0-exit infra. **Last-consumer-slice: Phase-0-exit (infra).**
 
 ---
 
@@ -272,10 +270,12 @@ drift. No business logic — just the contracts, codegen, store skeleton, mock f
 - ✅ **LANDED** `818024d` (feat(contracts), 1 commit). 62 tests green; `mypy --strict` clean. code-quality fixed in-slice (`entry_keys` `@abstractmethod`); security correctly not run (pure structural validator). **🏁 Last §2.5 seam — the contract family is FROZEN** (error/ipc/responses/domain/providers/workers/registries).
 
 ### 0.6 — py↔ts codegen + CI drift gate
-- [ ] pydantic = single source → JSON Schema → generated TS (UI) + Node (worker) types; **CI gate fails on drift** (§4).
-- [ ] Files: NEW codegen script + CI workflow
-- [ ] Cross-doc invariant: none (tooling)
-- [ ] Depends on: 0.2, 0.3, 0.4, 0.5
+- [x] pydantic = single source → `models_json_schema` combined `$defs` → `json-schema-to-typescript` (pinned 15.0.4) → `generated/{contracts.ts, helpers.ts}`. Deterministic (fixed banner, sorted keys, no timestamps). `python -m aisims_contracts.codegen --check` = the pure-Python primary drift gate; a GH Actions job runs it. Generated artifacts committed (gate's diff target), never hand-edited (fp-2). (§4)
+- [x] Carry-forwards folded in: ErrorCode `parseErrorCode→SYSTEM` tolerance helper (0.6 part; Phase-7 UI wiring remains); field titles handled codegen-side (no snapshot re-freeze). Snapshot-hardening NOT folded (its own slice).
+- [x] Files: NEW `codegen.py` + `scripts/emit-ts.mjs` + `package.json` + `pnpm-lock.yaml` + `generated/*` + `test_codegen.py` (C1 `033e25f`); `.github/workflows/contracts-drift-gate.yml` (C2 `ee51b24` — repo's first CI workflow, D20)
+- [x] Cross-doc invariant: none (tooling) — orchestrator wrote the §4 codegen-toolchain arch-note + Lessons 12–13
+- [x] Depends on: 0.2, 0.3, 0.4, 0.5 (all landed)
+- ✅ **LANDED** C1 `033e25f` (codegen pipeline) + C2 `ee51b24` (CI workflow). 70 tests green (incl. node-coupled, not skipped); `mypy --strict` clean; `--check` exit 0; codegen byte-deterministic. code-quality fixed in-slice (incl. a [high] `$ref`-sibling over-collapse). + tooling fix `99bc955` (/preflight codegen step, 2nd Finding).
 
 ### 0.7 — Postgres store skeleton + Alembic + versioning
 - [ ] Repository layer (sidecar = sole writer); Alembic baseline; data-dir **version stamp** + startup compat check; project `schemaVersion`/`registryVersion` stamps; write-bytes-then-commit-row artifact ordering (§13).
@@ -716,3 +716,14 @@ _(Empty at project start; populated as scope cuts surface.)_
 - **Finding (tooling, → lead):** `/preflight` Step-1 per-area `uv sync` prunes the shared workspace `dev` group (removes mypy/ruff/pytest); recovered via root `uv sync`. The template should sync from the workspace root (or `--all-packages` / `--group dev`) for the Python areas.
 - **Next session target:** 0.6 (py↔ts codegen + CI drift gate, §4) — same teammates, dispatched right after the push. Then 0.7–0.9, then `/phase-exit 0`.
 - **Reference:** implementer session doc `docs/sessions/contract-002-2026-06-17-contract-family-freeze.md`.
+
+### 2026-06-17 — Phase 0 contracts round 3 (0.6): codegen + CI drift gate; implementer cycle
+
+- **Landed:** 0.6 py→ts codegen + CI drift gate (§4) — C1 `033e25f` (`models_json_schema` aggregate → combined `$defs` → `json-schema-to-typescript` pinned 15.0.4 → `generated/{contracts.ts, helpers.ts}`, deterministic; two-level `--check` gate, pure-Python primary, fully pytest-tested) + C2 `ee51b24` (the repo's **first CI workflow** — minimal GH Actions contracts-drift job). 70 contracts tests; `mypy --strict` clean. Plus 2 `/preflight` tooling fixes: `93b9a3e` (D19 — `uv sync --all-packages`) + `99bc955` (codegen step → `aisims_contracts.codegen --check`).
+- **Decisions:** **D19** (local `/preflight` uv-sync fix) · **D20** (minimal GH Actions drift-gate now; holistic per-area CI deferred to Phase-0 exit) · **P5** (scaffolding-source `/preflight` bugs — BOTH — → user upstream) · **P4** (6-track fork-timing → Phase-0 exit). Carry-forwards folded: ErrorCode `parseErrorCode→SYSTEM` tolerance (0.6 part; Phase-7 UI wiring remains) + field-titles (codegen-side strip, resolved); snapshot-hardening kept as its own slice (impl's bisectability call).
+- **Lessons banked:** §12 (deterministic codegen + committed artifacts; a gate VERIFIES, never mutates) · §13 (strict-producer / tolerant-consumer wire enum — `ErrorCode`→`SYSTEM`).
+- **Carry-forward triage (Step 5.5):** field-titles DELETED (resolved in 0.6); ErrorCode-tolerance KEPT (Phase-7 remains); holistic-CI ADDED (D20, Phase-0-exit); snapshot-hardening re-marked own-slice. 5 items, under cap.
+- **Team:** implementer **CYCLE** at the 0.6 boundary — `contract-contracts-implementer` (WARN 71%) cycled out; orchestrator persists (53%); a fresh `contract-pipeline-implementer` (area=`services/pipeline`) takes 0.7–0.9. The contracts→pipeline area transition + the WARN both pointed here.
+- **Round seal:** D18-style milestone checkpoint — sealed + pushed to origin/track/contract (NOT a fork-merge).
+- **Next session target:** 0.7 (Postgres store skeleton + Alembic + versioning, §13) — fresh services/pipeline implementer, after the seal. Then 0.8 → 0.9 → `/phase-exit 0` (P4 + holistic-CI return there).
+- **Reference:** implementer session doc `docs/sessions/contract-003-2026-06-17-codegen-drift-gate.md`.

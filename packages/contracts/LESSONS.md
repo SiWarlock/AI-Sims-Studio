@@ -127,3 +127,21 @@ The contracts package is mostly frozen *shapes* (snapshot-guarded), but a §2.5 
 
 **Rule:** a contracts package may ship a pure, deterministic validator function alongside its frozen models — TDD it with good/bad fixtures (distinct from the snapshot); take raw data in so construction failures become findings; return a granular local `issue` + an embedded `ErrorEnvelope`; keep it pure (no I/O) and scope-bounded (structural, not semantic).
 **Enforce:** `pin: tests/test_registries.py::test_validate_registry_ok` + `::test_validate_registry_rejects` + `::test_validate_registry_scope_boundary`.
+
+## <a id="12"></a>12. Generated artifacts are committed + never hand-edited; the codegen must be DETERMINISTIC or the drift gate false-positives
+
+**Date:** 2026-06-17. **Source slice:** 0.6 (`codegen.py`, §4).
+
+The py→ts codegen (`models_json_schema` over all 7 contracts → combined `$defs` → `json-schema-to-typescript` → `generated/contracts.ts` + `helpers.ts`) **commits its output** as the **drift gate's diff target** (forbidden-pattern 2: never hand-edit a generated artifact — the gate enforces it; edit the model + regen). For the gate to be trustworthy the codegen must be **deterministic**: a fixed `bannerComment` (no timestamps), sorted keys, stable ordering — otherwise a clean tree emits a different-but-equivalent output every run and `--check` false-positives. **Two-level gate:** the pure-Python combined-schema `--check` (regenerate in-memory + diff committed) is the **primary** cross-track enforcement (always runnable, fully pytest-tested, no node dependency); the node TS-regen + diff catches stale TS. A gate/preflight **VERIFIES** in-sync (`--check`) — it NEVER mutates the tree (a bare regen in a preflight is a bug — cf. the `/preflight` codegen-step Finding fixed this round).
+
+**Rule:** commit generated artifacts as the gate's diff target (never hand-edit, fp-2); the codegen must be deterministic (fixed banner, sorted keys, no timestamps) or the gate false-positives; a drift gate VERIFIES (`--check`), never mutates.
+**Enforce:** `pin: tests/test_codegen.py::test_codegen_deterministic` + `::test_drift_gate_fails_on_drift`.
+
+## <a id="13"></a>13. Forward-compatible wire enum — STRICT producer, TOLERANT consumer
+
+**Date:** 2026-06-17. **Source slice:** 0.6 (codegen) · origin 0.2 (D10b).
+
+A closed enum on a frozen wire contract (`ErrorCode`) stays a **STRICT** closed set on the PRODUCER side (the pydantic model — `extra="forbid"` + exact membership) so the producer can't emit a code outside the taxonomy. But the CONSUMER must **TOLERATE** an unknown code → fall back to a safe default (`SYSTEM`), so a future **additive** enum split (e.g. `PROVIDER_AUTH_QUOTA` → `PROVIDER_AUTH` + `PROVIDER_QUOTA`) is **non-breaking** for an old client. The codegen emits the tolerance as a generated `parseErrorCode(x): ErrorCode → SYSTEM` helper (a strict TS literal union + a tolerant parse), NOT a loose `| string` type. Strict model + tolerant consumers, riding `contractVersion`, is the production-grade combo for an evolvable taxonomy. (The consumer-side wiring — the UI's Zod boundary calls `parseErrorCode` — lands Phase 7.)
+
+**Rule:** a forward-compatible wire enum is STRICT on the producer (closed + exact membership) and TOLERANT on the consumer (unknown → safe default via a generated parse helper), so an additive split is non-breaking.
+**Enforce:** `pin: tests/test_codegen.py::test_errorcode_tolerance`; `accepted: consumer-side Zod-boundary wiring is Phase 7`.

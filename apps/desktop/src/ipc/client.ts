@@ -10,6 +10,8 @@ import type {
   RunResponse,
   SettingsResponse,
   StartRunRequest,
+  TestProviderRequest,
+  TestProviderResponse,
   UpdateSettingsRequest,
 } from "../../../../packages/contracts/generated/contracts";
 
@@ -73,6 +75,9 @@ export interface IpcClient {
   updateSettings(body: UpdateSettingsRequest): Promise<SettingsResponse>;
   /** GET /readiness — read-only system-readiness probe (token header, NO Idempotency-Key). */
   getReadiness(): Promise<ReadinessReport>;
+  /** POST /settings/providers/{p}/test — connectivity probe (mutating: token + Idempotency-Key).
+   *  The secret is NEVER in the body (rule 5) — the sidecar reads the key from the keychain. */
+  testProvider(providerId: string, body?: TestProviderRequest): Promise<TestProviderResponse>;
 }
 
 export function createIpcClient(options: IpcClientOptions): IpcClient {
@@ -133,5 +138,10 @@ export function createIpcClient(options: IpcClientOptions): IpcClient {
     updateSettings: (body) =>
       request<SettingsResponse>("GET/PUT /settings", { method: "PUT", body }),
     getReadiness: () => request<ReadinessReport>("GET /readiness"),
+    testProvider: (providerId, body) =>
+      request<TestProviderResponse>("POST /settings/providers/{p}/test", {
+        pathParams: { p: providerId },
+        ...(body ? { body } : {}),
+      }),
   };
 }

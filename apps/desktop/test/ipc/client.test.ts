@@ -92,6 +92,54 @@ describe("IPC client — token + idempotency boundary (§4/§16)", () => {
     expect(report.checks[0]?.subsystem).toBe("blender");
   });
 
+  it("test_test_provider_is_mutating_post_with_idempotency_key — spec(§4) Lesson 5", async () => {
+    const rf = recordingFetch([jsonResponse({ ok: true, latencyMs: 12 })]);
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: rf.fetchImpl });
+
+    await client.testProvider("openai");
+
+    expect(rf.calls[0]?.init?.method).toBe("POST");
+    expect(rf.calls[0]?.url).toContain("/settings/providers/openai/test");
+    expect(rf.headerOf(0, TOKEN_HEADER)).toBe(TOKEN);
+    expect(rf.headerOf(0, IDEMPOTENCY_KEY_HEADER)).not.toBeNull(); // mutating ⇒ idempotency key
+  });
+
+  it("test_test_provider_no_secret_in_body — rule-5 (keychain-only, never on the wire)", async () => {
+    const rf = recordingFetch([jsonResponse({ ok: true }), jsonResponse({ ok: true })]);
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: rf.fetchImpl });
+
+    await client.testProvider("openai", { model: "gpt-4" });
+    const body = JSON.parse(String(rf.calls[0]?.init?.body ?? "{}")) as Record<string, unknown>;
+    expect(body).toEqual({ model: "gpt-4" }); // ONLY model rides the body
+    expect(body).not.toHaveProperty("apiKey");
+    expect(body).not.toHaveProperty("key");
+    expect(body).not.toHaveProperty("secret");
+
+    await client.testProvider("openai"); // no body arg ⇒ no request body at all
+    expect(rf.calls[1]?.init?.body).toBeUndefined();
+  });
+
+  it("test_test_provider_returns_parsed_response — spec(§4)", async () => {
+    const rf = recordingFetch([
+      jsonResponse({
+        ok: false,
+        error: {
+          category: "provider",
+          code: "PROVIDER_AUTH_QUOTA",
+          creatorMessage: "bad key",
+          maintainerDetail: "x",
+          retryable: false,
+        },
+      }),
+    ]);
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: rf.fetchImpl });
+
+    const resp = await client.testProvider("openai");
+
+    expect(resp.ok).toBe(false);
+    expect(resp.error?.code).toBe("PROVIDER_AUTH_QUOTA");
+  });
+
   it("test_token_never_logged_or_in_url — spec(§4) §16 forbidden-pattern-3", async () => {
     const spies = (["log", "info", "warn", "error", "debug"] as const).map((m) =>
       vi.spyOn(console, m).mockImplementation(() => undefined),

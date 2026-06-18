@@ -154,6 +154,18 @@ app repository owns PipelineRun/Step/candidate/variant rows). *Verify `langgraph
 with the SQLite saver at build start (ADR-002 note); fall back to SQLite checkpointer in a separate file if
 unavailable.*
 
+**Phase-2 spine (2.1/2.2 skeleton — `services/pipeline/graph/`, core track).** The graph-runtime `PipelineState`
+(`graph/state.py`) references §12 entities **by id** and imports their enums from `aisims_contracts` (never redefines
+them): `{projectId, runId, itemStates: dict[str,ItemState], providerJobRefs, gateCursor: GateKind|None, artifactRefs,
+pollErrors}`. The 5 ordered approval gates are `interrupt()`/`Command(resume)` with a `GateKind`-keyed ordered-gate
+guard (`graph/gates.py`) as the **Inv5 enforcement point** (rejects an out-of-order / unknown-gate resume). Cloud
+stages are **two-phase**: a `@task` submit node (result-checkpointed) persists the `ProviderJobRef` into State
+**before any side effect**, then a `<stage>_poll` reconcile node (R9 no-double-submit on replay). **`durability='sync'`
+is a runtime `invoke`/`stream` arg in langgraph 1.2.5 — NOT a `compile()` kwarg** — so `build_graph` compiles
+checkpointer-only; the 'sync' convention is applied by the run-start caller. Checkpointer factory =
+`langgraph-checkpoint-postgres` primary with a separate-module SQLite-saver fallback (ADR-002): SQLite = deterministic
+unit path, PG = env-gated `AISIMS_TEST_DATABASE_URL`.
+
 ## §6 — Job/run engine + supervisor
 Distinct from the graph. Schedules items **bounded-parallel** with **two separate caps** (a *cloud-submit*
 concurrency cap and a *local-Blender-subprocess* cap — different hot paths; defaults are human-set config
@@ -172,6 +184,18 @@ child/grandchild/port). The **single-writer lock** is on-disk, carrying owner-PI
 always holds**; reclaim is gated on a **dead owner PID only** (heartbeat/ttl ride as metadata for Phase-2 PID-reuse
 disambiguation + fencing, *not* consulted by the reclaim gate — so a GC pause / swap can't trigger a double-writer
 reclaim). `release()` is idempotent. Atomic-acquire (close the acquire TOCTOU) + a fencing token are Phase-2.
+
+**Phase-2 scheduler + reconciler (2.3/2.4 — core track).** The **scheduler** (`engine/scheduler.py`, distinct from the
+graph) bounds item work by two independent `ResourceKind`-tagged `asyncio.Semaphore` caps (cloud-submit /
+local-Blender), block-and-queue on `acquire`, per-item failure isolation via a `dict[str,UnitResult]` map (catch
+`Exception`, **not** `BaseException` — cancellation propagates), and a one-active-project **reject** guard
+(`ProjectBusyError`, released in `finally`) — an in-memory guard **distinct** from the 0.9 on-disk `SingleWriterLock`.
+The **startup reconciler** (`engine/reconciler.py`) is a pure decision-table `decide(poll_status, artifact_present) →
+{RE_POLL, RESUME, RE_FETCH, REGENERATE}` with the re-fetch→regenerate escalation (re-fetch fails / no urls) and a
+conservative human-gated REGENERATE on a poll-raise; FS/provider deps injected; decision-only (the transactional "step
+FAILED" write + regenerate re-enqueue are the 2.7 run-start integration). `reclaim_stale_lock` reuses the 0.9
+**dead-PID-only** reclaim on reopen (a LIVE owner is never reclaimed; atomic-acquire + fencing stay the Phase-2+
+upgrade).
 
 ## §7 — Provider adapters  *(frozen contract)*
 Three interfaces, mock+real behind each (PIPE-002/003), model-agnostic + **bakeoff** (no model lock-in):

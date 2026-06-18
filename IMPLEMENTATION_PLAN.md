@@ -38,12 +38,26 @@ dependency audit — no known vulnerabilities; per-slice security CLEAR (0.7 sol
 11 anchors tagged + §2.5/§21/§3 **user-waived** (2026-06-17). Audit reports: `docs/audits/phase-0-*.md`. The `py.typed`
 Finding is **CLOSED** (resolved by D24 `14ec0ce`; the pipeline `follow_untyped_imports` stopgap was already removed).
 
-**Next:** the **6-track fork (P4)** — Phase 0 froze the shared contracts, so spikes / core / providers /
-mesh-export-functional / ui / obs-evals can now fork off `origin/track/contract` (lead + user coordinating). **The
-contract team winds down.** Deferred to a next-phase **infra** round (D20, user-approved): holistic per-area CI + a PG
-service for 0.7's env-gated store integration test + wiring `pip-audit` into the dev env. Inv1 (exportability gate) +
-Inv5 (ordered gates) remain PINNED non-droppable **Phase-2** safety items (D16). Open contracts micro-slice (not
-Phase-0-blocking): the 0.5b snapshot-hardening back-port (needs a `packages/contracts` implementer).
+**Now: the 6-track fork (P4) is LIVE** — spikes / core / providers / mesh-export-functional / ui / obs-evals forked off
+`origin/track/contract` (lead + user coordinating; each track in its own worktree + team). **The contract team has wound
+down.**
+
+**Track status (per-track; each track adds its own as it closes a round):**
+- **core (Phase 2)** — **round 1 SEALED (2.1–2.4) on `track/core`** (2026-06-18). The resumable pipeline spine is up on
+  mocks: typed by-id `PipelineState` + 5 ordered `interrupt()` gates (**Inv5** PINNED, own commit) + PG/SQLite
+  checkpointer with resume-across-restart (2.1); two-phase `@task` cloud node, R9 no-double-submit (2.2); bounded-
+  parallel scheduler, two `ResourceKind` caps (2.3); startup reconciler decision-table + dead-PID lock reclaim (2.4).
+  99 tests. **Remaining Phase 2:** 2.5 (error-taxonomy/watchdog/bounded-repair/cancel) → **2.6 Inv1 exportability gate**
+  (PINNED, own commit+pin) → **2.7 run-start integration + the kill→reconcile→resume contract test** (the Phase-2
+  acceptance demo). **Next target: 2.5.** _(Code on `track/core`, not yet merged to integration — this plan delta is the
+  integration record; merge follows the Track-map order.)_
+- **spikes / providers / mesh-export / ui / obs-evals** — forked; status tracked per-track as each closes a round.
+
+**Safety items:** **Inv5** (ordered gates) ✅ landed (core 2.1); **Inv1** (full exportability gate) remains the open
+PINNED non-droppable **Phase-2** item → **core 2.6** (D16). Deferred to a next-phase **infra** round (D20,
+user-approved): holistic per-area CI + a PG service for 0.7's env-gated store integration test + wiring `pip-audit`.
+Open contracts micro-slice (not fork-blocking): the 0.5b snapshot-hardening back-port (needs a `packages/contracts`
+implementer).
 
 ---
 
@@ -357,31 +371,35 @@ parallel scheduling, reconcile-and-resume, human gates — provably resumable en
 **Track:** core · **Depends on (phases):** 0.
 
 ### 2.1 — LangGraph StateGraph + checkpointer
-- [ ] One node/subgraph per stage; typed State references domain entities by id (§5). Checkpointer = `langgraph-checkpoint-postgres` with **ownership partition** (checkpoint = graph position only); **verify parity vs SQLite saver** (ADR-002 note) — flag if unavailable.
-- [ ] Approval gates = `interrupt()`/`Command(resume)` for plan/concept/mesh/overlay/export.
-- [ ] Files: NEW `services/pipeline/graph/*`
-- [ ] Cross-doc invariant: extended (State mirrors §12)
-- [ ] Depends on: 0.4, 0.7
+- [x] One node/subgraph per stage; typed State references domain entities by id (§5). Checkpointer = `langgraph-checkpoint-postgres` with **ownership partition** (checkpoint = graph position only); **verify parity vs SQLite saver** (ADR-002 note) — flag if unavailable.
+- [x] Approval gates = `interrupt()`/`Command(resume)` for plan/concept/mesh/overlay/export.
+- [x] Files: NEW `services/pipeline/graph/*`
+- [x] Cross-doc invariant: extended (State mirrors §12)
+- [x] Depends on: 0.4, 0.7
+- ✅ **LANDED** (track/core) `69a405b` (Inv5 ordered-gates guard, own commit + pin: `test_gates_ordered`/`test_gates_graph`) · `a742045` (StateGraph + typed by-id `PipelineState`) · `b1cabd2` (PG/SQLite checkpointer + resume-across-restart + DSN-redaction caplog pin). **[SAFETY rule-6 / Inv5] satisfied.**
 
 ### 2.2 — Two-phase cloud node pattern (idempotent + reconcilable)
-- [ ] `@task`-wrapped idempotent submit → persist `ProviderJobRef` **before any side effect** → poll/reconcile node; `durability='sync'` for cloud/long stages (prevents double-billing on replay, R9).
-- [ ] Files: NEW `services/pipeline/graph/cloud_node.py`
-- [ ] Cross-doc invariant: none
-- [ ] Depends on: 2.1, 0.5
+- [x] `@task`-wrapped idempotent submit → persist `ProviderJobRef` **before any side effect** → poll/reconcile node; `durability='sync'` for cloud/long stages (prevents double-billing on replay, R9).
+- [x] Files: NEW `services/pipeline/graph/cloud_node.py`
+- [x] Cross-doc invariant: none
+- [x] Depends on: 2.1, 0.5
+- ✅ **LANDED** (track/core) `0bc96c2` — `@task` submit persists `ProviderJobRef` before any side effect → poll/reconcile node (R9 no-double-submit on replay); `durability='sync'` applied at runtime invoke (langgraph 1.2.5 — not a `compile()` kwarg); bounded poll watchdog.
 
 ### 2.3 — Job/run engine: bounded-parallel + two caps
-- [ ] Schedule items bounded-parallel with **separate cloud-submit and local-Blender caps** (config knobs, §21); one active project; block-and-queue on saturation; per-item failure isolation.
-- [ ] Files: NEW `services/pipeline/engine/scheduler.py`
-- [ ] Cross-doc invariant: none
-- [ ] Depends on: 2.1
-- [ ] Implements: REQ-NF-101
+- [x] Schedule items bounded-parallel with **separate cloud-submit and local-Blender caps** (config knobs, §21); one active project; block-and-queue on saturation; per-item failure isolation.
+- [x] Files: NEW `services/pipeline/engine/scheduler.py`
+- [x] Cross-doc invariant: none
+- [x] Depends on: 2.1
+- [x] Implements: REQ-NF-101
+- ✅ **LANDED** (track/core) `a1e6d9e` — two `ResourceKind` semaphore caps (cloud / Blender), block-and-queue, per-item isolation (catch `Exception`, not `BaseException`), one-active-project reject guard (`ProjectBusyError`, released in `finally`).
 
 ### 2.4 — Startup reconciler + stale-lock recovery
-- [ ] Decision-table (§6): job_id pollable→re-poll; expired/GC'd→failed+regenerate; succeeded-but-artifact-missing→re-fetch then regenerate. Single-writer lock w/ PID+heartbeat reclaimable on reopen.
-- [ ] Files: NEW `services/pipeline/engine/reconciler.py`
-- [ ] Cross-doc invariant: none
-- [ ] Depends on: 2.2, 0.9
-- [ ] Implements: REQ-NF-102
+- [x] Decision-table (§6): job_id pollable→re-poll; expired/GC'd→failed+regenerate; succeeded-but-artifact-missing→re-fetch then regenerate. Single-writer lock w/ PID+heartbeat reclaimable on reopen.
+- [x] Files: NEW `services/pipeline/engine/reconciler.py`
+- [x] Cross-doc invariant: none
+- [x] Depends on: 2.2, 0.9
+- [x] Implements: REQ-NF-102
+- ✅ **LANDED** (track/core) `2165c56` — pure decision-table `decide(...)→{RE_POLL,RESUME,RE_FETCH,REGENERATE}`, re-fetch→regenerate escalation, per-ref isolation, conservative human-gated REGENERATE on poll-raise, dead-PID lock reclaim on reopen.
 
 ### 2.5 — Error taxonomy handling + watchdog + bounded repair + cancel
 - [ ] Provider-error classification (transient/rate-limited/terminal-config); hang/no-progress watchdog (workers + cloud polls); bounded LLM repair loop (max-K); cancel semantics (§17).
@@ -389,10 +407,24 @@ parallel scheduling, reconcile-and-resume, human gates — provably resumable en
 - [ ] Cross-doc invariant: extended (`ErrorEnvelope` from §17)
 - [ ] Depends on: 2.3, 0.2
 
+### 2.6 — [SAFETY-RULE-1 · Inv1 · PINNED · NON-DROPPABLE · D16] Full exportability gate  *(added 2026-06-18, user-approved; origin: core round-1 Finding — Inv1 had no home in original 2.1–2.5)*
+- [ ] The Phase-2 engine validator completes the 3-condition gate: an item is exportable **only if** `included ∧ has a state=selected AssetVariant ∧ no blocking validation` (Inv1) — pinned by a test asserting all three conditions gate export (own commit, mirroring how Inv5 landed in 2.1).
+- [ ] Files: NEW `services/pipeline/engine/exportability.py` (or the export-stage validator seam)
+- [ ] Cross-doc invariant: none (consumes 0.4a `AssetVariant`/`AssetVariantState`/`ItemSpec`; State-internal)
+- [ ] Depends on: 2.1 (export gate node), 0.4a
+- [ ] Implements: SAFETY-RULE-1 / Inv1
+
+### 2.7 — Run-start integration + reconcile-resume contract test  *(added 2026-06-18, user-approved; origin: core round-1 Finding — the end-to-end acceptance demo was not an explicit 2.X task)*
+- [ ] End-to-end boot wiring: supervisor → reconciler → scheduler → `build_graph` resume; registry-selected providers via the 2.2 `providers=` seam (Lesson 13); per-item State keying (`itemId:stage`); a `StepRepository` for the transactional "step FAILED" write + the regenerate re-enqueue; `TaskGroup`/explicit sibling-cancel for cancellable real work (2.3-b); the queryable app-repo `ProviderJobRef` persistence (2.2-d).
+- [ ] **The reconcile-resume contract test:** a full mock collection runs on the graph; kill mid-run → reopen → reconcile + resume from the last completed step with **no lost accepted assets and no double-submit**; gates pause/resume across process exit.
+- [ ] Files: NEW `services/pipeline/engine/runner.py` (boot/run-start) + a `StepRepository` in `store/`
+- [ ] Cross-doc invariant: none
+- [ ] Depends on: 2.2, 2.3, 2.4, 2.5
+
 ### Acceptance criteria (2)
 - [ ] All 2.X ticked. A full mock collection runs on the graph; kill mid-run → reopen → reconcile + resume from last completed step with **no lost accepted assets and no double-submit** (the reconcile-resume contract test). Gates pause/resume across process exit.
 - [ ] **[SAFETY-RULE-1 · PINNED · NON-DROPPABLE · D16] Full exportability gate.** 0.4a type-encodes only the structural part (export-ready requires a selected-variant ref). The Phase-2 engine validator MUST complete the 3-condition gate — an item is exportable **only if** `included ∧ has a selected AssetVariant ∧ no blocking validation` (Inv1) — pinned by a test asserting all three conditions gate export. Don't let the safety gate fall through the 0.4→Phase-2 handoff.
-- [ ] **[SAFETY-RULE-6 · PINNED · NON-DROPPABLE · D16] Ordered approval gates (Inv5).** The 5 gates enforce strict order plan→concept→mesh→overlay→export (no mesh before concept-approved; no overlay before variant-selected; no export before export-approval) — enforced by the Phase-2 state machine / LangGraph interrupts, pinned by a test. `GateKind` (the pinned set, from the 0.3 contract) is the canonical enum.
+- [x] **[SAFETY-RULE-6 · PINNED · NON-DROPPABLE · D16] Ordered approval gates (Inv5).** The 5 gates enforce strict order plan→concept→mesh→overlay→export (no mesh before concept-approved; no overlay before variant-selected; no export before export-approval) — enforced by the Phase-2 state machine / LangGraph interrupts, pinned by a test. `GateKind` (the pinned set, from the 0.3 contract) is the canonical enum. **✅ landed 2.1 (`69a405b`), pinned by `test_gates_ordered`/`test_gates_graph` (core track).**
 
 ---
 
@@ -756,3 +788,12 @@ _(Empty at project start; populated as scope cuts surface.)_
 - **Carry-forward triage (Step 5.5):** 2 DELETED (redaction-egress → landed 0.9 `e8fe397`; StructuredT-export → resolved 0.8), 5 ADDED/consolidated as cross-track handoffs (Phase-2 GateKind + obs/engine wiring; Phase-2/3 mock + provider-output-validation; Phase-8 tracing bounding), 2 KEPT (Phase-7 ErrorCode-tolerance; contracts snapshot-hardening micro-slice); holistic-CI re-marked next-phase infra. 7 items — a deliberate phase-boundary handoff list for the forking tracks.
 - **🏁 PHASE 0 SEALED + PUSHED** to `origin/track/contract`: round 5 = 0.8 + 0.9 slice commits + impl session doc `5ddff0b` (contract-004) + this docs-seal commit. **Next: the 6-track fork (P4)** — lead + user coordinating; the **contract team winds down**, its mission (freeze the §2.5 seams + the Phase-0 skeletons) complete.
 - **Reference:** implementer session doc `docs/sessions/contract-004-2026-06-17-services-pipeline-phase0-tail.md`; phase-exit audits `docs/audits/phase-0-{arch-drift,reachability-pipeline,reachability-contracts}.md`.
+
+### 2026-06-18 — Phase 2 core round 1 (2.1–2.4): pipeline spine on track/core
+- **Landed:** 2.1 (`69a405b` Inv5 gate guard, own commit+pin · `a742045` StateGraph+State · `b1cabd2` checkpointer+resume+DSN-redaction pin) · 2.2 (`0bc96c2` two-phase cloud node, R9) · 2.3 (`a1e6d9e` bounded-parallel scheduler, REQ-NF-101) · 2.4 (`2165c56` startup reconciler + dead-PID lock reclaim, REQ-NF-102). 99 passed/1 skipped; mypy --strict 59 files. _(Code on `track/core`; this plan/arch delta applied to the integration tree by the core lead — multi-track shared-root-doc routing.)_
+- **Decisions:** durability is a langgraph-1.2.5 **runtime** invoke arg (not compile) → build_graph compiles checkpointer-only (Lesson 11). R9 scopes to no-double-**submit**; mid-poll re-fetch is the reconciler's job. one-active-project = in-memory reject guard, distinct from the 0.9 on-disk lock. Reconciler poll-raise → conservative human-gated REGENERATE (transient→RE_POLL reclassification deferred to 2.5).
+- **Restructure (user-approved 2026-06-18):** ADD 2.6 (Inv1 full-exportability-gate, own commit+pin — the second PINNED D16 item, no home in the original 2.1–2.5) + 2.7 (run-start integration + the kill→reconcile→resume contract test — the Phase-2 acceptance demo, not an explicit 2.X task). Surfaced by the orchestrator as a **Finding**; user approved both as required/non-droppable + chose close-out-now at the clean 2.1–2.4 boundary.
+- **Lessons banked:** `services/pipeline` §9–§16 (graph State by-id+contract-enums · checkpointer PG/SQLite-fallback · langgraph add_node mypy overload · two-phase cloud node/R9 · injected provider · ResourceKind caps · asyncio catch-Exception-not-BaseException · reconciler decision-table) — on `track/core`.
+- **Carry-forward triage:** run-start-integration items folded INTO 2.7; transient-poll→RE_POLL folded INTO 2.5; the PollFetchProvider hoist-to-shared-engine-module + the Inv1 validator → 2.6/2.7.
+- **Round seal:** 2.1–2.4 sealed on `track/core`; closed out at a clean 4-slice boundary (orchestrator surfaced the Phase-2-completeness Finding + the context fork at OK-64%-climbing; user chose close-out-now). Phase 2 resumes fresh (2.5→2.6→2.7).
+- **Reference:** handoff `docs/team-handoffs/core-001-2026-06-18-phase2-spine.md`; implementer session doc `docs/sessions/core-001-…-phase2-spine.md`; briefs `docs/briefs/core-00{1,2,3,4}-*.md` (all on `track/core`).

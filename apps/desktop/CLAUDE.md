@@ -113,6 +113,12 @@ be expressed as a pattern carry a `pin:` (test ref) or `accepted:` note on the r
 ```forbidden-patterns
 # rule 2: durable pipeline state in renderer (pin: thin-observer state test — derive run/item/step from SSE, not local cache)
 # rule 3: sidecar request missing the per-launch token  fetch\([^)]*\)(?!.*Authorization)
+# lesson 1: native EventSource for sidecar SSE — use fetch+ReadableStream w/ header-borne token  new[[:space:]]+EventSource\(
+# lesson 2: Zod boundary drift from the generated contract (pin: test_sse_schema_type_parity_with_generated)
+# lesson 3: loopback token via argv — use sync-IPC + closure-getter contextBridge  additionalArguments|process\.argv
+# lesson 4: React/jsdom in a UI-logic unit test — test logic over injected ports in node env (pin: onboarding/settings tests are framework-agnostic)
+# lesson 5: type-open IPC method override / post-hoc Idempotency-Key strip — gate the override + derive idempotency from the effective method  \.method\s*=|delete .*[Ii]dempotency
+# lesson 6: raw fs/Node handle exposed to the renderer — expose a narrow read-only sendSync bridge w/ allowlist + top-frame sender gate  exposeInMainWorld\([^)]*require\(|contextBridge[^]*\bfs\b\s*:
 ```
 
 <!-- ▲ END EXAMPLE BLOCK [id=forbidden-patterns] ▲ -->
@@ -180,7 +186,12 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [SSE transport](LESSONS.md#1) | UI↔sidecar SSE = `fetch`+`ReadableStream`, token in the `X-AISims-Token` header on open *and* reconnect; never native `EventSource` with a URL token. Guard replay with a `Last-Event-ID` cursor-drop **and** an idempotent projection. |
+| 2 | 2026-06-17 | [Zod boundary parity](LESSONS.md#2) | Zod is the runtime boundary; the generated contract is the type — a compile-time parity manifest pins `z.infer` to the generated members/enums so the validator can't drift. |
+| 3 | 2026-06-17 | [Loopback token handoff](LESSONS.md#3) | Serve the per-launch token via sync-IPC + a closure-getter `contextBridge`; never `process.argv`/`additionalArguments` (enumerable by other local processes). |
+| 4 | 2026-06-17 | [Framework-agnostic UI logic](LESSONS.md#4) | Test UI logic over injected ports (`node` env, no React); the React screen is a thin view whose visuals ride design-fixture review (D4), mapped `not-tested-because: visual/wiring`. |
+| 5 | 2026-06-17 | [Conflated GET/PUT client split](LESSONS.md#5) | A frozen endpoint that conflates GET/PUT under one id splits in the client via a **gated** method override (throws outside the named endpoint) + idempotency derived from the effective method — never type-open or strip-after-the-fact. |
+| 6 | 2026-06-17 | [Narrow renderer↔main bridge](LESSONS.md#6) | Renderer↔main host access = a narrow read-only bridge: `sendSync`, one allowlisted channel (`default→null`), read-only ops (`fs.access` for writability), a top-frame sender gate per handler; compose bridges into one `window.aisims` via the single helper (closure-getter last). |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

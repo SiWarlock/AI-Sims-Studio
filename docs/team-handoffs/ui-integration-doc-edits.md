@@ -23,6 +23,7 @@
 | A3 | §16 | Add a one-line note: the renderer↔main **IPC handlers are top-frame sender-gated** (`senderFrame` must be the top frame) on both the fs-probe and token channels, and host access is a **narrow read-only bridge** (allowlisted single channel, no raw `fs`) — the 7.2b real keychain/sidecar handshake MUST preserve both the no-argv (A2) and sender-gate posture. | 7.2c | QUEUED |
 | A4 | §4 | **Readiness surface LANDED (contracts-012/0.10).** Add to §4 + Appendix-A: the additive read-only `GET /readiness → ReadinessReport{overall: ReadyState, checks:[ReadinessCheck{subsystem: ReadinessSubsystem, status, detail?, remediation?}]}` (READ_ONLY, `{SYSTEM}` error) + the emitted **IPC protocol catalog** (`generated/ipc-catalog.ts`). Additive-only (existing models unchanged). | contracts-012 | QUEUED |
 | A6 | §16/§13 | **Keychain writer/reader scheme (7.2b-1).** Note: the **UI is the OS-keychain WRITER** (Electron `@napi-rs/keyring`, write-only bridge — no read-back), the **sidecar is the reader** (Python `keyring`, 7.2b-2); the named-entry scheme is `(service="AISimsCreator", account=providerId)` — the ui-owned secret-name contract shared verbatim both ends. Rule-5 redaction: fresh typed error (no raw `cause`) + coarse redacted codes + secret-canary on writer AND bridge. | 7.2b-1 | QUEUED |
+| A7 | §4 | **`PUT /settings` = FULL-REPLACE (user-pinned this round, reversing the implicit partial-PUT assumption).** The Phase-2 `/settings` handler MUST replace the full resource (an omitted optional field resets to its default) and ship with a **contract acceptance test** enforcing full-replace (lead-owned; the core track inherits this at integration). UI corrected to **read-modify-write** the full `SettingsResponse` (brief `ui-009` — fixes the latent data-loss in shipped `persistModsPath` + `persistTelemetryEnabled`; mock flipped PATCH-merge→full-replace). **DESIGN NUANCE for contracts/core:** under full-replace, `UpdateSettingsRequest`'s optional fields are a footgun (omitting one resets it) — evaluate making the fields **required** (not blocking, not a micro-slice now). | finding(ui)→user §4 call | QUEUED |
 | A5 | §7/§8/§11 | **0.5b min_length tightening LANDED (contracts-012/0.10).** Note: `min_length=1` on the scalar path/ref/key fields (provider/worker/registry ids/refs/keys + `RuleSpec.kind`). **CONSUMER HEADS-UP for the merge:** this MOVES the providers/workers/registries snapshots — **core/providers/mesh-export rebase + re-verify** when contracts-012 merges → track/ui (an empty path/ref/key was already invalid → a correctness tightening, not a break of valid usage). | contracts-012 | QUEUED |
 
 ## `IMPLEMENTATION_PLAN.md`
@@ -31,7 +32,7 @@
 | # | Target | Edit | Origin | Status |
 |---|---|---|---|---|
 | P1 | 7.1 | Tick **7.1 [x]** — Electron shell + SSE observer + Last-Event-ID reconnect + loopback token + §21 responsiveness test. Landed on `track/ui`: C1 `c22e5cd` (IPC client + SSE thin-observer core) + C2 `49de4d2` (Electron shell + token handoff + renderer wiring); 17 tests green. | 7.1 | QUEUED |
-| P2 | 7.2 | **7.2 stays `[ ]` — PARTIAL.** Landed: **7.2a** (`27513c2`+`523f8b3`, onboarding detect/Mods-path/settings + React/Vite) + **7.2c** (`26e148e`, preload FS bridge — detection live). Still missing: **7.2b** (keychain write + per-provider test-call + tracing opt-out — in flight, interop spike first) + the **readiness gate** (waits on the §4 micro-slice). Note: `(partial: 7.2a/7.2c landed; 7.2b + readiness-gate pending)`. | 7.2a/7.2c | QUEUED |
+| P2 | 7.2 | **7.2 stays `[ ]` — PARTIAL.** Landed: **7.2a** (`27513c2`+`523f8b3`, onboarding detect/Mods-path/settings + React/Vite) + **7.2c** (`26e148e`, preload FS bridge — detection live) + **7.2b-1** (`c355105`+`d566774`, write-only keychain bridge) + **7.2b-2** (`f8a851f`, sidecar keychain read accessor) + the **readiness gate** (`528bbdb` — §18(4) gate over `GET /readiness` + client call) + **7.2b-3** (`c173f75` — per-provider test-call + onboarding key validation) + **7.2b-4** (`432a468` — privacy/telemetry opt-out settings write). **All deterministic 7.2 logic is now landed.** 7.2 stays `[ ]` PARTIAL only pending the **design-fixture (D4) screen wiring** (the visual New-Project gate screen, the API-key test UI, the telemetry toggle + disclosure copy — tracked as T16/T17/T18; consumed by the 7.3/onboarding screens). Note: `(partial: all 7.2 logic landed — 7.2a/7.2c + 7.2b-1/2/3/4 + readiness-gate; visual screen wiring is design-fixture, T16/T17/T18)`. | 7.2a/7.2c/7.2b/readiness-gate | QUEUED |
 
 ### Carry-forward landings
 | # | Item | Edit | Origin | Status |
@@ -43,7 +44,10 @@
 |---|---|---|---|---|
 | T1 | 7.2 | Pin CSP `connect-src` to the negotiated sidecar port + header-level CSP (`onHeadersReceived`) + define the SSE reconnect-on-non-2xx policy (today it fails loud) + real sidecar-minted token (**preserve no-argv** handoff, see A2). | 7.1 | QUEUED |
 | T2 | 7.2a | Vite build so the renderer is built/loaded by the Electron shell. **RE-TARGETED 7.3→7.2a** per D4. **RESOLVED in 7.2a** (React/Vite toolchain + `vite build` → dist/renderer landed) — **no plan TODO needed; drop at integration.** | 7.1 → 7.2a | RESOLVED |
-| T4 | 7.2 / contracts | **F1=B (user, 2026-06-17):** re-open §4 with an **additive** readiness surface (proposed: new read-only `GET /readiness → ReadinessReport{overall, checks:[{subsystem,status,detail?,remediation?}]}`) on the contract/integration owning tree, re-froze + codegen'd + propagated; the UI **readiness gate** is deferred until it lands. Routed by the lead as a contracts/integration micro-slice (batchable w/ 0.5b + T3). | 7.2 (F1=B) | QUEUED |
+| T4 | 7.2 / contracts | **F1=B (user, 2026-06-17):** re-open §4 with an **additive** readiness surface (proposed: new read-only `GET /readiness → ReadinessReport{overall, checks:[{subsystem,status,detail?,remediation?}]}`) on the contract/integration owning tree, re-froze + codegen'd + propagated; the UI **readiness gate** is deferred until it lands. Routed by the lead as a contracts/integration micro-slice (batchable w/ 0.5b + T3). **RESOLVED:** the surface landed (contracts-012, merge `d18c8f5`) AND is consumed — the §18(4) readiness gate (`computeReadinessGate`/`evaluateNewProjectReadiness` + `getReadiness()`) landed this round. Drop at integration. | 7.2 (F1=B) | RESOLVED |
+| T16 | 7.3 | **Wire `evaluateNewProjectReadiness` into the New-Project gate screen.** The readiness-gate controller (`src/onboarding/readiness-gate.ts`) is exported + fully tested but **test-only — no production caller yet**; the 7.3 New-Project gate screen is its consumer (disable New-Project + render per-subsystem remediation from `ReadinessGate.blocking`/`degraded`; visuals = design-fixture D4). Add as a 7.3 task bullet. origin: readiness-gate (7.2), last-consumer-slice: 7.3. | readiness-gate (7.2) | QUEUED |
+| T17 | 7.2/7.3 | **Wire `testProviderConnectivity` into the onboarding API-key entry screen.** The provider-test controller (`src/onboarding/provider-test.ts`) is exported + fully tested but **test-only — no production caller yet**; the onboarding API-key entry screen is its consumer (validate a written key, render valid/latency or the `ProviderTestResult` failure code + `creatorMessage`; visuals = design-fixture D4). Add as a task bullet on the API-key-screen slice. origin: 7.2b-3, last-consumer-slice: onboarding API-key screen. | 7.2b-3 | QUEUED |
+| T18 | 7.2/7.3 | **Wire `persistTelemetryEnabled` into the Settings/onboarding telemetry toggle + disclosure.** The helper (`src/settings/settings.ts`) is exported + tested but **test-only — no production caller yet**; `src/surfaces/onboarding/OnboardingScreen.tsx` (already consumes the sibling `persistModsPath`) is the consumer once the telemetry toggle control + the "what leaves the machine" disclosure copy land there (design-fixture D4). Add as a task bullet on that screen slice. origin: 7.2b-4, last-consumer-slice: Settings/onboarding toggle screen. | 7.2b-4 | QUEUED |
 | T5 | 7.2 | **Preload FS bridge** — `node:fs`-backed `FsProbe` under `window.aisims.fs`, narrow read-only + top-frame sender gate. **RESOLVED in 7.2c** — Sims-install detection is now live (no longer safe-defaulting). No plan TODO needed; drop at integration. | 7.2a → 7.2c | RESOLVED |
 | T8 | 7.3 | **Exact-renderer-URL sender-origin pin** on the renderer↔main IPC handlers (today: top-frame-only gate, landed 7.2c). Tighten to pin the exact renderer origin when the screens/packaging URL is fixed. | 7.2c | QUEUED |
 | T9 | 7.x (if needed) | **`isDirectory` error-distinction** — the boolean `FsProbe.isDirectory` conflates not-exist vs permission-denied (EACCES). Accepted limitation (the sync boolean interface has no error channel; detection checks `exists` first). Enrich only if a consumer needs the distinction (ripples the 7.2a `FsProbe` interface). | 7.2c | QUEUED (accepted) |
@@ -84,6 +88,34 @@
   7.3/7.4 held for a dedicated decomposition + user scope input.
 - Reference: orchestrator session doc `ui-001-2026-06-18-phase7-detection-vertical.md` (no implementer `/session-end`
   ran this round — checkpoint).
+```
+
+```markdown
+### 2026-06-18 — Phase 7 §18 onboarding logic complete + §4 full-replace fix (ui track, round 4)
+
+- Landed on `track/ui` (all green, all reviewed): **readiness-gate** `528bbdb` (§18(4) system-readiness gate over the
+  merged `GET /readiness` + token-bearing client call; turned the post-merge endpoint drift-guard green), **7.2b-3**
+  `c173f75` (§18(1) per-provider test-call + onboarding key validation), **7.2b-4** `432a468` (§18(5) telemetry
+  opt-out write), **§4 full-replace fix** `2894a26` (`fix(desktop)` — read-modify-write both settings helpers,
+  data-loss correction). **All deterministic Phase-7 §18 onboarding logic is now complete.**
+- 7.2 stays `[ ]` PARTIAL — only the design-fixture (D4) screen wiring remains (the New-Project gate screen, the
+  API-key test UI, the telemetry toggle + disclosure copy). Three tested controllers wait for a screen consumer:
+  `evaluateNewProjectReadiness` (T16), `testProviderConnectivity` (T17), `persistTelemetryEnabled` (T18).
+- Decisions made (user): **§4 `PUT /settings` = FULL-REPLACE** (resolving the ui-raised finding) — the UI was
+  migrated to read-modify-write the full settings object (fixed latent data-loss in shipped `persistModsPath` +
+  `persistTelemetryEnabled`); the mock flipped PATCH-merge→full-replace. Cross-track: the Phase-2 `/settings` handler
+  must be full-replace + ship a contract acceptance test (lead-owned; ledger A7). Design nuance flagged for
+  contracts/core: `UpdateSettingsRequest` optional fields are a full-replace footgun (evaluate making them required).
+- Lessons banked: **9** (server-report gate derives its own decision, fail-safe allow-list), **10** (render
+  `creatorMessage` not `maintainerDetail`; `parseErrorCode` tolerance), **11** (full-replace ⇒ read-modify-write the
+  full resource; fixture models full-replace; confirm semantics from the contract not the mock).
+- Carry-forward triage: C1 (ErrorEnvelope `code`-tolerance) already marked last-consumer LANDED (7.1); no ui-relevant
+  Carry-forward items remain open.
+- New blockers / open questions: **7.3/7.4 scope** held for user input (orchestrator escalated A/B/C; recommended
+  vertical-slice-first to consume T16/T17/T18). §4 footgun (required fields) awaiting contracts/core.
+- Next session target: 7.3 per the user's scope pick (design-fixture screens consuming the held controllers) +
+  any §4 required-fields follow-up (contracts/core-owned).
+- Reference: implementer `/session-end` session doc this round (next `ui-` NNN); briefs `ui-006`/`007`/`008`/`009`.
 ```
 
 ---

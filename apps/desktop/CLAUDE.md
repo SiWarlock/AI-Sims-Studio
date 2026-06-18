@@ -81,9 +81,8 @@ pnpm dev
 # Tests
 pnpm test:run
 
-# Quality
+# Quality (formatting is ESLint-enforced — there is no separate `format` script)
 pnpm lint
-pnpm format --check
 pnpm typecheck
 
 # Preflight (use before saying "done" with a feature)
@@ -121,6 +120,9 @@ be expressed as a pattern carry a `pin:` (test ref) or `accepted:` note on the r
 # lesson 6: raw fs/Node handle exposed to the renderer — expose a narrow read-only sendSync bridge w/ allowlist + top-frame sender gate  exposeInMainWorld\([^)]*require\(|contextBridge[^]*\bfs\b\s*:
 # lesson 7: a keychain getProviderKey / read-back to the renderer — bridge is write-only (set/has/delete, no get)  getProviderKey|keychain[^]*\bget(Password|ProviderKey)\b.*renderer
 # lesson 8: raw keychain/secret error propagated (cause/message may echo the secret) — throw a fresh typed error, coarse redacted codes  catch[^]*throw (err|error|e)\b|cause:\s*(err|error|e)\b
+# lesson 9: a server-report gate that trusts report.overall or fails open on unknown status (pin: test_gate_derives_from_checks_not_overall + test_gate_fail_safe_on_unrecognized_status + test_gate_blocked_takes_precedence_over_unrecognized — decision derives from per-check status as a fail-safe allow-list, overall advisory)
+# lesson 10: maintainerDetail surfaced/rendered in a UI/renderer path (rule-5 — surface creatorMessage only)  \bmaintainerDetail\b
+# lesson 11: a full-replace PUT helper sending a partial body (data loss) (pin: test_persist_mods_path_read_modify_writes_full_object + test_persist_telemetry_read_modify_writes_full_object + test_mock_full_replace_resets_omitted_field — RMW the full resource; fixture models full-replace)
 ```
 
 <!-- ▲ END EXAMPLE BLOCK [id=forbidden-patterns] ▲ -->
@@ -196,6 +198,9 @@ Lessons start at §1.
 | 6 | 2026-06-17 | [Narrow renderer↔main bridge](LESSONS.md#6) | Renderer↔main host access = a narrow read-only bridge: `sendSync`, one allowlisted channel (`default→null`), read-only ops (`fs.access` for writability), a top-frame sender gate per handler; compose bridges into one `window.aisims` via the single helper (closure-getter last). |
 | 7 | 2026-06-18 | [Write-only keychain bridge](LESSONS.md#7) | Provider secrets go through a **write-only** main-process keychain bridge (`set`/`has`(bool)/`delete`, **no `get`**) named `(service="AISimsCreator", account=providerId)`; the sidecar reads, the renderer never reads back; keep the secret-name constants identical both ends. |
 | 8 | 2026-06-18 | [Rule-5 redaction discipline](LESSONS.md#8) | At a secret boundary: throw a fresh typed error (no raw `cause`) + coarse redacted codes; reject empty/missing secrets before the store; pin redaction with a secret-canary on **every** layer that touches the value (writer AND bridge), not just the innermost. |
+| 9 | 2026-06-18 | [Server-report gate decision](LESSONS.md#9) | A gate over a server-driven report derives its OWN decision from per-element status (fail-safe **allow-list**; precedence `blocked > indeterminate > ready`; empty/off-contract ⇒ `indeterminate`, never optimistic-ready); the server's `overall` roll-up is advisory, never the safety decision. |
+| 10 | 2026-06-18 | [ErrorEnvelope UI surfacing](LESSONS.md#10) | Render an `ErrorEnvelope`'s **`creatorMessage` only, never `maintainerDetail`** (rule-5 egress at the UI — make the view type structurally unable to hold maintainerDetail); normalize `code` via `parseErrorCode` (unknown/missing → `SYSTEM`); surface the message faithfully (incl. empty) rather than masking a producer violation with a fabricated fallback. |
+| 11 | 2026-06-18 | [Full-replace ⇒ read-modify-write](LESSONS.md#11) | A **full-replace** PUT helper must read-modify-write the full resource (GET → overlay the changed field → PUT all fields, each resolved explicitly so falsy/null survive); the fixture must model full-replace (omitted → default) + sibling-survival tests use **non-default** values so a silent drop fails loudly. Confirm PUT semantics from the contract, not the mock. |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

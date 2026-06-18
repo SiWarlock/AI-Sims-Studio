@@ -198,7 +198,69 @@ isn't the guarantee; the full renderer→main→keychain path is.
 empty/missing secrets before the store; pin redaction with a secret-canary on **every** layer that touches the
 value, not just the innermost one.
 
-<!-- next lesson: §9 -->
+## <a id="9"></a>9. A gate over a server-driven report derives its OWN decision (fail-safe allow-list), never trusting the server's summary
+
+**Date:** 2026-06-18.
+**Source slice:** 7.2 readiness-gate (`src/onboarding/readiness-gate.ts`).
+
+A `ReadinessReport` carries both per-subsystem `checks[]` and a server-computed `overall` summary. The UI gate that
+decides "can New Project start?" **derives its own decision from the per-`check.status` set** and treats `overall`
+as advisory/display only — a server summary can be stale or wrong, and the gate's safety decision must not depend on
+it. The decision is a **fail-safe allow-list** (`canStart` iff the checks are non-empty AND **every** check ∈
+`{ready, degraded}`), not a deny-list (`no check is blocked`): the allow-list **fails closed** on an off-contract /
+unrecognized status, where a deny-list would fail open. Empty `checks` or an unrecognized status is an explicit
+`indeterminate` state ("not yet determined"), **never optimistic-ready**. Precedence is **blocked > indeterminate >
+ready**: a known, actionable subsystem blockage is surfaced (with its `detail`/`remediation`) even when an unrelated
+check is off-contract — never masked behind "couldn't determine." `degraded` warns (surfaced non-blocking) but does
+not block. Surface **every** blocking subsystem, not just the first, so the UI can render per-subsystem remediation.
+
+**Rule:** A gate over a server-driven report computes its own decision from the per-element status as a fail-safe
+allow-list (membership in the known-good set), with explicit fail-closed handling of empty/off-contract input
+(`indeterminate`, never optimistic) and a `blocked > indeterminate > ready` precedence; the server's roll-up summary
+is advisory, never the safety decision.
+
+## <a id="10"></a>10. Surface an ErrorEnvelope's `creatorMessage` in the UI — never `maintainerDetail`; tolerate unknown codes
+
+**Date:** 2026-06-18.
+**Source slice:** 7.2b-3 provider test-call (`src/onboarding/provider-test.ts`).
+
+The frozen `ErrorEnvelope` carries **two** human strings: `creatorMessage` (user-facing, rule-5-safe) and
+`maintainerDetail` (diagnostic — may carry context that must not reach the end user, logs, or traces). When a UI
+surface renders a server error envelope, it surfaces **`creatorMessage` only, never `maintainerDetail`** — the
+rule-5 egress principle applied to error rendering. Make it **structurally** impossible where you can: the UI result
+type (`ProviderTestResult`) has **no field** that could carry `maintainerDetail`, so a slip can't compile. Pair this
+with **additive-enum tolerance**: normalize `error.code` through `parseErrorCode` (unknown / missing envelope →
+`SYSTEM`) so an additive `ErrorCode` split or an empty envelope never crashes the flow. And surface `creatorMessage`
+**faithfully — including an empty string** — rather than fabricating a fallback message: a fabricated fallback would
+**mask a producer contract violation** (an empty creatorMessage is the producer's bug to fix, not the consumer's to
+paper over).
+
+**Rule:** Rendering a server `ErrorEnvelope` in the UI = surface `creatorMessage` only (never `maintainerDetail` —
+make the view type structurally incapable of holding it), normalize the code via `parseErrorCode` (unknown/missing →
+`SYSTEM`), and surface the message faithfully rather than masking a producer violation with a fabricated fallback.
+
+## <a id="11"></a>11. Under FULL-REPLACE PUT semantics, a write helper must read-modify-write the full resource
+
+**Date:** 2026-06-18.
+**Source slice:** 7.2 settings full-replace RMW fix (`src/settings/settings.ts`) — corrected shipped `persistModsPath`
+(7.2a) + `persistTelemetryEnabled` (7.2b-4).
+
+When a REST endpoint's PUT is **full-replace** (the whole resource is overwritten; an omitted optional field resets
+to its default), a write helper that sends **only the changed field silently resets every omitted field** — data
+loss. The fix is **read-modify-write**: GET the current resource, overlay the one changed field in memory, PUT the
+**FULL** object (every field explicitly present). **Resolve each field explicitly** (not via spread-of-partial) so a
+falsy / null value (`false`, `""`, `null`) is preserved rather than dropped, and `exactOptionalPropertyTypes` doesn't
+bite. Make the **test fixture model full-replace faithfully** (omitted → default) so it **catches** a partial-PUT
+regression instead of masking it — and assert sibling survival with **NON-DEFAULT** values (a default-valued sibling
+can't detect a drop, since the reset lands on the same value). And **verify PUT semantics against the contract, not
+the mock**: a merge-mock hid a full-replace contract for an entire round here (the gap surfaced only when the
+semantics were pinned in §4).
+
+**Rule:** full-replace PUT ⇒ read-modify-write the full resource (GET → overlay → PUT all fields, each resolved
+explicitly so falsy/null survive); the fixture models full-replace (omitted → default), and sibling-survival tests
+use non-default values so a silent drop fails loudly. Confirm the PUT semantics from the contract, never the mock.
+
+<!-- next lesson: §12 -->
 
 
 

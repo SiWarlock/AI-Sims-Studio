@@ -6,6 +6,7 @@
  */
 import type {
   ListProjectsResponse,
+  ReadinessReport,
   RunResponse,
   SettingsResponse,
   StartRunRequest,
@@ -70,6 +71,8 @@ export interface IpcClient {
   getSettings(): Promise<SettingsResponse>;
   /** PUT /settings — a write (carries Idempotency-Key); secrets never ride the body (rule 5). */
   updateSettings(body: UpdateSettingsRequest): Promise<SettingsResponse>;
+  /** GET /readiness — read-only system-readiness probe (token header, NO Idempotency-Key). */
+  getReadiness(): Promise<ReadinessReport>;
 }
 
 export function createIpcClient(options: IpcClientOptions): IpcClient {
@@ -129,5 +132,6 @@ export function createIpcClient(options: IpcClientOptions): IpcClient {
     getSettings: () => request<SettingsResponse>("GET/PUT /settings", { method: "GET" }),
     updateSettings: (body) =>
       request<SettingsResponse>("GET/PUT /settings", { method: "PUT", body }),
+    getReadiness: () => request<ReadinessReport>("GET /readiness"),
   };
 }

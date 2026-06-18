@@ -45,7 +45,7 @@ describe("IPC client — token + idempotency boundary (§4/§16)", () => {
 
   it("test_client_idempotency_key_on_mutating_only — spec(§4) R9", () => {
     const ids = Object.keys(ENDPOINTS) as EndpointId[];
-    expect(ids.length).toBe(14);
+    expect(ids.length).toBe(15);
     for (const id of ids) {
       const headers = buildRequestHeaders({ endpointId: id, token: TOKEN });
       if (isMutating(id)) {
@@ -59,6 +59,37 @@ describe("IPC client — token + idempotency boundary (§4/§16)", () => {
     expect(
       buildRequestHeaders({ endpointId: "GET /projects", token: TOKEN })[IDEMPOTENCY_KEY_HEADER],
     ).toBeUndefined();
+  });
+
+  it("test_get_readiness_is_token_bearing_read_only — spec(§4) Lesson 5", async () => {
+    const rf = recordingFetch([jsonResponse({ overall: "ready", checks: [] })]);
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: rf.fetchImpl });
+
+    await client.getReadiness();
+
+    expect(rf.calls.length).toBe(1);
+    expect(rf.calls[0]?.init?.method).toBe("GET");
+    expect(rf.calls[0]?.url).toContain("/readiness");
+    expect(rf.headerOf(0, TOKEN_HEADER)).toBe(TOKEN);
+    // read-only ⇒ no idempotency key. headerOf goes through Headers.get(), which returns null
+    // (not undefined) for an absent header — hence toBeNull here vs toBeUndefined on plain dicts.
+    expect(rf.headerOf(0, IDEMPOTENCY_KEY_HEADER)).toBeNull();
+  });
+
+  it("test_get_readiness_returns_parsed_report — spec(§4)", async () => {
+    const rf = recordingFetch([
+      jsonResponse({
+        overall: "blocked",
+        checks: [{ subsystem: "blender", status: "blocked", remediation: "Install Blender 5.1" }],
+      }),
+    ]);
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: rf.fetchImpl });
+
+    const report = await client.getReadiness();
+
+    expect(report.overall).toBe("blocked");
+    expect(report.checks).toHaveLength(1);
+    expect(report.checks[0]?.subsystem).toBe("blender");
   });
 
   it("test_token_never_logged_or_in_url — spec(§4) §16 forbidden-pattern-3", async () => {

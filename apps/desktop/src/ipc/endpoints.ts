@@ -28,6 +28,7 @@ export interface EndpointDef {
 export const ENDPOINTS = {
   "POST /projects": { method: "POST", path: "/projects", mutating: true },
   "GET /projects": { method: "GET", path: "/projects", mutating: false },
+  "GET /readiness": { method: "GET", path: "/readiness", mutating: false },
   "POST /projects/{id}/runs": { method: "POST", path: "/projects/{id}/runs", mutating: true },
   "POST /runs/{id}/gate": { method: "POST", path: "/runs/{id}/gate", mutating: true },
   "POST /items/{id}/regenerate": {

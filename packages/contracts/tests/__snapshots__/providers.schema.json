@@ -216,14 +216,17 @@
         "title": "Expiresat"
       },
       "jobId": {
+        "minLength": 1,
         "title": "Jobid",
         "type": "string"
       },
       "model": {
+        "minLength": 1,
         "title": "Model",
         "type": "string"
       },
       "provider": {
+        "minLength": 1,
         "title": "Provider",
         "type": "string"
       },

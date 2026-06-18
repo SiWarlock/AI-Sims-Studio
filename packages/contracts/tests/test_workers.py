@@ -246,6 +246,26 @@ def test_worker_failure_uses_error_envelope() -> None:  # spec(§17)
     assert BlenderReport.model_validate_json(report.model_dump_json()) == report
 
 
+def test_worker_ref_fields_reject_empty() -> None:  # spec(§8)/spec(§9)
+    """0.5b hardening: the worker INPUT path/ref/id fields reject "" (min_length=1) — the OUTPUT
+    refs (BlenderReport.geomBytesRef/previewRef, ExportJobReport.packagePath) already pinned."""
+    blender_base = {
+        "meshPath": "scratch/mesh/x.glb",
+        "params": {},
+        "donorBBox": _bbox().model_dump(mode="json"),
+        "jobId": "b1",
+    }
+    BlenderJob.model_validate(blender_base)  # the all-present baseline is valid
+    for field in ("meshPath", "jobId"):
+        with pytest.raises(ValidationError):
+            BlenderJob.model_validate({**blender_base, field: ""})
+    export_base = {"donorRef": "donor/123", "geomBytesRef": "scratch/geom/abc.bin", "jobId": "e1"}
+    ExportJob.model_validate(export_base)  # the all-present baseline is valid
+    for field in ("donorRef", "geomBytesRef", "jobId"):
+        with pytest.raises(ValidationError):
+            ExportJob.model_validate({**export_base, field: ""})
+
+
 def test_workers_import_direction(intra_imports: Callable[[ModuleType], set[str]]) -> None:
     """workers.py imports `error` only — its own §2.5 seam (acyclic DAG); spec(§8)/spec(§9).
 

@@ -118,6 +118,19 @@ export type MeshState = 'generated' | 'accepted' | 'rejected' | 'superseded';
  */
 export type PollStatus = 'submitted' | 'running' | 'succeeded' | 'failed' | 'expired';
 /**
+ * The readiness state of a system prerequisite (§4/§18). A protocol-level closed vocabulary
+ * (like LogLevel/GateKind) — grows additively, with the §17 tolerant-consumer pattern if needed.
+ *
+ * ``ready`` = prerequisite satisfied; ``degraded`` = usable but sub-optimal (e.g. a provider key
+ * present but unverified); ``blocked`` = a hard prerequisite the onboarding gate must resolve.
+ */
+export type ReadyState = 'ready' | 'degraded' | 'blocked';
+/**
+ * The system prerequisites the readiness probe reports on (§18's 5 onboarding prerequisites).
+ * A protocol-level closed vocabulary; additive thereafter (a new subsystem extends the set).
+ */
+export type ReadinessSubsystem = 'postgres' | 'blender' | 'sims_install' | 'mods_path' | 'providers';
+/**
  * The closed set of load-time registry issues (structural only — Q2 scope).
  */
 export type RegistryIssue = 'missing-version' | 'duplicate-key' | 'malformed-entry';
@@ -195,6 +208,11 @@ export interface AISimsContracts {
   ProviderJobRef: ProviderJobRef;
   ProviderUsage: ProviderUsage;
   QaStatus: QaStatus;
+  ReadinessCheck: ReadinessCheck;
+  ReadinessReport: ReadinessReport;
+  ReadinessRequest: ReadinessRequest;
+  ReadinessSubsystem: ReadinessSubsystem;
+  ReadyState: ReadyState;
   RegenCleanupRequest: RegenCleanupRequest;
   RegenConceptRequest: RegenConceptRequest;
   RegenMeshRequest: RegenMeshRequest;
@@ -689,6 +707,26 @@ export interface ProviderJobRef {
   provider: string;
   submittedAt: string;
 }
+/**
+ * One subsystem's readiness in the GET /readiness probe (§4/§18): a prerequisite + its state,
+ * with an optional human ``detail`` and ``remediation`` the onboarding gate surfaces. Carries no
+ * domain entity (a protocol/onboarding view); the enums are the §4 readiness vocab (ipc).
+ */
+export interface ReadinessCheck {
+  detail?: string | null;
+  remediation?: string | null;
+  status: ReadyState;
+  subsystem: ReadinessSubsystem;
+}
+/**
+ * GET /readiness response (§4) — the onboarding gate's system-readiness surface: an ``overall``
+ * rollup + the per-subsystem ``checks``. ADDITIVE post-seal surface; embeds no domain entity.
+ */
+export interface ReadinessReport {
+  checks: ReadinessCheck[];
+  overall: ReadyState;
+}
+export interface ReadinessRequest {}
 export interface RegenCleanupRequest {
   target?: 'cleanup';
 }

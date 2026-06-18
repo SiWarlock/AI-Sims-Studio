@@ -75,10 +75,11 @@ class BlenderJob(_Worker):
     """Inputs the sidecar hands the Blender CLI subprocess (§8). ``meshPath`` is a scratch-path ref;
     ``params`` is the open, job-specific knob bag (the adapter/worker interprets it)."""
 
-    meshPath: str
+    # min_length=1 (0.5b): meshPath/jobId are real scratch-path / id refs, never blank (rule 3/6).
+    meshPath: str = Field(min_length=1)
     params: dict[str, Any]
     donorBBox: BBox
-    jobId: str
+    jobId: str = Field(min_length=1)
 
 
 class BlenderReport(_Worker):
@@ -110,12 +111,13 @@ class ExportJob(_Worker):
     threaded through (the §8↔§9 GEOM-bytes flow); ``textures`` are scratch refs; ``tuningEdits`` is
     the open OBJD-tuning edit bag; ``targetTGIKeys`` are the target resource keys."""
 
-    donorRef: str
-    geomBytesRef: str
+    # min_length=1 (0.5b): donorRef/geomBytesRef/jobId are real refs/ids, never blank (rule 3/6).
+    donorRef: str = Field(min_length=1)
+    geomBytesRef: str = Field(min_length=1)
     textures: list[str] = Field(default_factory=list)
     tuningEdits: dict[str, Any] = Field(default_factory=dict)
     targetTGIKeys: list[str] = Field(default_factory=list)
-    jobId: str
+    jobId: str = Field(min_length=1)
 
 
 class ExportJobReport(_Worker):

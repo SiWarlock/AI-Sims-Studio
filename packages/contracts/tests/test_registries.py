@@ -210,6 +210,22 @@ def test_validate_registry_scope_boundary() -> None:  # spec(§11)
     assert validate_registry(data, PlacementTypeRegistry) == []
 
 
+def test_registry_key_fields_reject_empty() -> None:  # spec(§11)
+    """0.5b hardening: registry id/key/ref fields reject "" (min_length=1). Inv6 keeps them OPEN
+    ``str`` (never closed enums) — but never blank: an empty id/key/donorRef is invalid at load."""
+    for field in ("id", "donorRef"):
+        with pytest.raises(ValidationError):
+            _placement(**{field: ""})
+    for field in ("id", "donorRef"):
+        with pytest.raises(ValidationError):
+            _archetype(**{field: ""})
+    for field in ("key", "donorObjectKey"):
+        with pytest.raises(ValidationError):
+            _donor(**{field: ""})
+    with pytest.raises(ValidationError):
+        RuleSpec(kind="", params={})
+
+
 def test_registries_import_direction(intra_imports: Callable[[ModuleType], set[str]]) -> None:
     """registries.py imports `error` only — findings carry the §17 ErrorEnvelope; spec(§11).
 

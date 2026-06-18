@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from aisims_contracts import codegen
+from aisims_contracts import codegen, ipc
 from aisims_contracts.error import ErrorCode
 
 _NODE_DEP = (Path(__file__).parent.parent / "node_modules" / "json-schema-to-typescript").exists()
@@ -109,5 +109,37 @@ def test_codegen_emits_ts(tmp_path: Path) -> None:  # spec(§4)
 
 @requires_node
 def test_drift_gate_ts_passes_clean() -> None:  # spec(§4)
-    """The committed generated tree (schema + TS + helpers) matches a fresh regen (full gate)."""
+    """The committed generated tree (schema + TS + helpers + ipc-catalog) matches a fresh regen."""
     assert codegen.check() is True
+
+
+# ===========================================================================================
+# IPC protocol/endpoint catalog (contracts-012, item c / ledger T3) — the §4 endpoint catalog
+# (paths, mutating/read-only sets, header names, contractVersion) emitted to a generated TS
+# artifact so the UI imports it instead of the drift-guarded hand-authored endpoints.ts.
+# ===========================================================================================
+def test_codegen_emits_ipc_catalog() -> None:  # spec(§4)
+    """The emitted IPC catalog mirrors the ipc.py source-of-truth (endpoint paths, the read/mutate
+    partition, the header names, contractVersion); deterministic; the committed artifact matches —
+    a pure-Python drift half (no node), like schema_matches for the combined schema."""
+    catalog = codegen.build_ipc_catalog_ts()
+    # the source-of-truth protocol values appear in the emitted catalog.
+    assert ipc.CONTRACT_VERSION in catalog
+    assert ipc.TOKEN_HEADER in catalog
+    assert ipc.IDEMPOTENCY_KEY_HEADER in catalog
+    for endpoint in ipc.Endpoint:
+        assert endpoint.value in catalog, endpoint.value
+    # deterministic: byte-identical across runs (no timestamps / unsorted sets).
+    assert codegen.build_ipc_catalog_ts() == catalog
+    # the committed artifact equals the current source (the drift gate's pure-Python half).
+    committed = GENERATED_DIR / "ipc-catalog.ts"
+    assert committed.exists(), "generated/ipc-catalog.ts must be committed"
+    assert committed.read_text() == catalog
+
+
+def test_generated_ts_has_readiness_types() -> None:  # spec(§4)
+    """The regenerated combined TS surface carries the readiness types the UI readiness-gate imports
+    (additive §4 propagation: GET /readiness → ReadinessReport/ReadinessCheck/ReadyState/...)."""
+    ts = (GENERATED_DIR / "contracts.ts").read_text()
+    for ty in ("ReadinessReport", "ReadinessCheck", "ReadyState", "ReadinessSubsystem"):
+        assert ty in ts, ty

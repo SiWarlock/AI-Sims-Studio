@@ -158,7 +158,48 @@ token handler shared the gap) is worth folding into the slice whose crux it is. 
 a `default→null` reject, read-only ops only (`fs.access` for writability), and a top-frame sender gate on every
 handler; compose multiple bridges into one `window.aisims` via the single helper (closure-getter last).
 
-<!-- next lesson: §7 -->
+## <a id="7"></a>7. Provider secrets — a WRITE-ONLY main-process keychain bridge (no read-back to the renderer)
+
+**Date:** 2026-06-18.
+**Source slice:** 7.2b-1 (`electron/keychain.ts`, `electron/keychain-bridge.ts`).
+
+Provider API keys live in the OS keychain (rule 5; revised D3 = a shared NAMED entry, interop proven by spike
+7.2b-0). The renderer needs to **store, check, and clear** a key — but it must **never read one back**. So the
+keychain bridge is **write-only**: `window.aisims.keychain = {setProviderKey, hasProviderKey, deleteProviderKey}`
+with **no `getProviderKey`** — `has` returns a boolean only, and the secret is consumed by the **sidecar** (Python
+`keyring`, 7.2b-2), never re-entering the renderer. The entry is named `(service="AISimsCreator",
+account=providerId)`; that constant pair is the ui-owned secret-name contract shared **verbatim** with the sidecar
+read — keep both sides identical. The write path reuses the Lesson-6 narrow bridge (single allowlisted channel,
+`default→reject`, top-frame sender gate, single-`window.aisims` composition). The native `@napi-rs/keyring` import
+stays in `main.ts` (typecheck-only); its `Entry` is verified to return `getPassword→string|null` /
+`deletePassword→bool` (neither throws on not-found) — so the factory is a trivial pass-through and no fragile
+not-found classifier is needed.
+
+**Rule:** Provider secrets go through a **write-only** main-process keychain bridge (`set`/`has`(bool)/`delete`,
+**no `get`**) named `(service="AISimsCreator", account=providerId)`; the sidecar reads, the renderer never reads
+back. Keep the secret-name constants identical on both ends.
+
+## <a id="8"></a>8. Rule-5 redaction discipline — fail-safe typed errors, coarse redacted codes, secret-canary on every layer
+
+**Date:** 2026-06-18.
+**Source slice:** 7.2b-1 (`electron/keychain.ts`, `electron/keychain-bridge.ts`).
+
+A secret-handling boundary's own error can **echo the secret** (a keychain lib may put the attempted value in its
+message). So never propagate a raw boundary error: catch it and throw a **fresh typed error with no `cause` chain**
+(`KeychainUnavailableError`) — fail-safe redaction beats diagnostic granularity. For remediation you still want
+*some* signal, so the IPC layer maps to **coarse, value-free redacted codes** (`invalid-id` / `unavailable` /
+`missing-key` / `unknown-method` / `sender` / `failed`) — never the raw error. Reject an **empty/missing key**
+before the keychain (an empty `set` silently clobbers a real key). And pin it with a **secret-canary**: feed a
+known secret through *every* layer that touches it — the writer AND the bridge dispatch/handler — and assert it
+appears in **no** console sink, no `repr`/`toString`, no error message/stack, and no IPC response. One layer's pin
+isn't the guarantee; the full renderer→main→keychain path is.
+
+**Rule:** At a secret boundary, throw a fresh typed error (no raw `cause`) + map to coarse redacted codes; reject
+empty/missing secrets before the store; pin redaction with a secret-canary on **every** layer that touches the
+value, not just the innermost one.
+
+<!-- next lesson: §9 -->
+
 
 
 

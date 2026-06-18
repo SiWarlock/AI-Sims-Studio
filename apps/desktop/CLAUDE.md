@@ -119,6 +119,8 @@ be expressed as a pattern carry a `pin:` (test ref) or `accepted:` note on the r
 # lesson 4: React/jsdom in a UI-logic unit test — test logic over injected ports in node env (pin: onboarding/settings tests are framework-agnostic)
 # lesson 5: type-open IPC method override / post-hoc Idempotency-Key strip — gate the override + derive idempotency from the effective method  \.method\s*=|delete .*[Ii]dempotency
 # lesson 6: raw fs/Node handle exposed to the renderer — expose a narrow read-only sendSync bridge w/ allowlist + top-frame sender gate  exposeInMainWorld\([^)]*require\(|contextBridge[^]*\bfs\b\s*:
+# lesson 7: a keychain getProviderKey / read-back to the renderer — bridge is write-only (set/has/delete, no get)  getProviderKey|keychain[^]*\bget(Password|ProviderKey)\b.*renderer
+# lesson 8: raw keychain/secret error propagated (cause/message may echo the secret) — throw a fresh typed error, coarse redacted codes  catch[^]*throw (err|error|e)\b|cause:\s*(err|error|e)\b
 ```
 
 <!-- ▲ END EXAMPLE BLOCK [id=forbidden-patterns] ▲ -->
@@ -192,6 +194,8 @@ Lessons start at §1.
 | 4 | 2026-06-17 | [Framework-agnostic UI logic](LESSONS.md#4) | Test UI logic over injected ports (`node` env, no React); the React screen is a thin view whose visuals ride design-fixture review (D4), mapped `not-tested-because: visual/wiring`. |
 | 5 | 2026-06-17 | [Conflated GET/PUT client split](LESSONS.md#5) | A frozen endpoint that conflates GET/PUT under one id splits in the client via a **gated** method override (throws outside the named endpoint) + idempotency derived from the effective method — never type-open or strip-after-the-fact. |
 | 6 | 2026-06-17 | [Narrow renderer↔main bridge](LESSONS.md#6) | Renderer↔main host access = a narrow read-only bridge: `sendSync`, one allowlisted channel (`default→null`), read-only ops (`fs.access` for writability), a top-frame sender gate per handler; compose bridges into one `window.aisims` via the single helper (closure-getter last). |
+| 7 | 2026-06-18 | [Write-only keychain bridge](LESSONS.md#7) | Provider secrets go through a **write-only** main-process keychain bridge (`set`/`has`(bool)/`delete`, **no `get`**) named `(service="AISimsCreator", account=providerId)`; the sidecar reads, the renderer never reads back; keep the secret-name constants identical both ends. |
+| 8 | 2026-06-18 | [Rule-5 redaction discipline](LESSONS.md#8) | At a secret boundary: throw a fresh typed error (no raw `cause`) + coarse redacted codes; reject empty/missing secrets before the store; pin redaction with a secret-canary on **every** layer that touches the value (writer AND bridge), not just the innermost. |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

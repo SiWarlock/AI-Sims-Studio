@@ -4,7 +4,7 @@
 - **Phase:** 0 (Foundations) — the `services/pipeline`-area tail; **completes Phase 0 (0.1–0.9)**
 - **Track:** contract · **Area:** services/pipeline · **Branch:** track/contract
 - **Predecessor:** [contract-003-2026-06-17-codegen-drift-gate.md](contract-003-2026-06-17-codegen-drift-gate.md)
-- **Successor:** _(TBD — Phase-0 exit / Phase 2 once tracks fork)_
+- **Successor:** [core-001-2026-06-18-phase2-spine.md](core-001-2026-06-18-phase2-spine.md) (core track — Phase 2 spine 2.1–2.4)
 
 ## Why this session existed
 

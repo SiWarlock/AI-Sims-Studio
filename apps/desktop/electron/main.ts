@@ -16,12 +16,31 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { Entry } from "@napi-rs/keyring";
 import { BrowserWindow, app, ipcMain } from "electron";
 
 import { isTopFrameSender, registerFsBridge } from "./fs-bridge";
+import { KeychainWriter, type KeychainEntryFactory } from "./keychain";
+import { registerKeychainBridge } from "./keychain-bridge";
 import { TOKEN_IPC_CHANNEL } from "./token-handoff";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
+
+/** Prod keyring factory over @napi-rs/keyring (interop + behavior proven by spike 7.2b-0). The
+ *  synchronous Entry returns sentinels for an absent entry — `getPassword(): string | null` (null
+ *  when absent) and `deletePassword(): boolean` (false when absent) — neither throws on not-found,
+ *  so the KeychainWriter's has/delete semantics hold directly. A real keychain failure (locked)
+ *  throws and propagates → KeychainUnavailableError in the writer. */
+const napiKeychainEntryFactory: KeychainEntryFactory = (service, account) => {
+  const entry = new Entry(service, account);
+  return {
+    setPassword: (password) => entry.setPassword(password),
+    getPassword: () => entry.getPassword(),
+    deletePassword: () => {
+      entry.deletePassword(); // boolean (false when absent) — ignored; no-op on not-found
+    },
+  };
+};
 
 function mintLoopbackToken(): string {
   return randomBytes(32).toString("hex");
@@ -71,6 +90,8 @@ app.whenReady().then(
       },
       { homedir },
     );
+    // Register the write-only keychain bridge (7.2b-1) over the real @napi-rs/keyring.
+    registerKeychainBridge(ipcMain, new KeychainWriter(napiKeychainEntryFactory));
     await createWindow();
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) void createWindow().catch(() => undefined);

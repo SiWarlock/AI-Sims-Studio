@@ -7,6 +7,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import { createFsBridge } from "./fs-bridge";
+import { createKeychainBridge } from "./keychain-bridge";
 import { TOKEN_IPC_CHANNEL, createLoopbackTokenChannel, type TokenSource } from "./token-handoff";
 
 const source: TokenSource = {
@@ -17,5 +18,7 @@ const source: TokenSource = {
 };
 
 const fs = createFsBridge((channel, ...args) => ipcRenderer.sendSync(channel, ...args));
+// Write-only keychain bridge (7.2b-1): set/has/delete provider keys; the secret is never read back.
+const keychain = createKeychainBridge((channel, ...args) => ipcRenderer.sendSync(channel, ...args));
 
-createLoopbackTokenChannel(source, contextBridge, { fs });
+createLoopbackTokenChannel(source, contextBridge, { fs, keychain });

@@ -39,7 +39,14 @@ async function createWindow(): Promise<void> {
   // A thin observer never navigates or opens windows — deny both (Electron hardening).
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (event) => event.preventDefault());
-  await win.loadFile(join(moduleDir, "..", "index.html"));
+  // Dev: load the Vite dev server (HMR, dev-only relaxed CSP). Prod: load the built renderer
+  // (dist/renderer/index.html — the tight prod CSP). The packaged layout is finalized at packaging.
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  if (devServerUrl) {
+    await win.loadURL(devServerUrl);
+  } else {
+    await win.loadFile(join(moduleDir, "..", "renderer", "index.html"));
+  }
 }
 
 app.whenReady().then(

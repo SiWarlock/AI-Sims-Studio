@@ -12,13 +12,8 @@
     <title>AI Sims Creator</title>
   </head>
   <body>
-    <!-- Static placeholder renderer (Phase-7.1). The real screens (React + Vite) land in 7.3. -->
-    <main id="app">
-      <h1>AI Sims Creator</h1>
-      <p>Thin observer initializing…</p>
-    </main>
-    <!-- The renderer entry wires the IPC client + SSE observer + projection (bootstrapObserver).
-         The TS→JS build step (Vite) is wired in 7.3; the source path is src/renderer-entry.ts. -->
-    <script type="module" src="./renderer-entry.js"></script>
+    <!-- React mount point (Vite entry). main.tsx mounts the app + boots the 7.1 thin observer. -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

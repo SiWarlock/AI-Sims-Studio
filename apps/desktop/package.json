@@ -5,6 +5,8 @@
   "type": "module",
   "description": "AI Sims Creator desktop UI (React 19 + Vite + Electron) — Phase-0 skeleton.",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:run": "vitest run --passWithNoTests"
@@ -12,13 +14,19 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@types/node": "^22.10.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
     "electron": "^42.4.1",
     "eslint": "^9.17.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0",
+    "vite": "^5.4.21",
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "zod": "^3.25.76"
   }
 }

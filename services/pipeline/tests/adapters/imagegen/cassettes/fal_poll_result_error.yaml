@@ -1,0 +1,35 @@
+interactions:
+- request:
+    body: null
+    headers:
+      content-type:
+      - application/json
+    method: GET
+    uri: https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/req-resulterr/status
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"status": "COMPLETED", "request_id": "req-resulterr", "metrics": {"inference_time":
+        2.5}, "response_url": "https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/req-resulterr"}'
+- request:
+    body: null
+    headers:
+      content-type:
+      - application/json
+    method: GET
+    uri: https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/req-resulterr
+  response:
+    status:
+      code: 503
+      message: Service Unavailable
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"detail": "result temporarily unavailable"}'
+version: 1

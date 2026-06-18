@@ -322,7 +322,9 @@ def test_factory_seam_no_self_registration() -> None:
     from adapters.llm import LLM_PROVIDERS
     from adapters.mock import MOCK_PROVIDERS
 
-    assert set(IMAGEGEN_PROVIDERS) == {"wavespeed"}
+    # wavespeed is registered (other backends like fal assert their own presence — this test
+    # doesn't own the full set, which grows as bakeoff backends land).
+    assert "wavespeed" in IMAGEGEN_PROVIDERS
     assert IMAGEGEN_PROVIDERS["wavespeed"] is WaveSpeedImageGenProvider
     assert all(isinstance(ctor, type) for ctor in IMAGEGEN_PROVIDERS.values())
     assert "wavespeed" not in MOCK_PROVIDERS

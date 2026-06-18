@@ -1,0 +1,21 @@
+interactions:
+- request:
+    body: '{"prompt": "a red armchair", "num_images": 1, "output_format": "png", "seed":
+      7}'
+    headers:
+      content-type:
+      - application/json
+    method: POST
+    uri: https://queue.fal.run/fal-ai/flux-pro/v1.1
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"request_id": "req-synthetic-1", "status_url": "https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/req-synthetic-1/status",
+        "response_url": "https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/req-synthetic-1",
+        "queue_position": 0}'
+version: 1

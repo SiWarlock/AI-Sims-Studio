@@ -1,0 +1,18 @@
+interactions:
+- request:
+    body: '{"prompt": "x", "num_images": 1, "output_format": "png", "seed": 1}'
+    headers:
+      content-type:
+      - application/json
+    method: POST
+    uri: https://queue.fal.run/fal-ai/flux-pro/v1.1
+  response:
+    status:
+      code: 401
+      message: Unauthorized
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"detail": "invalid credentials"}'
+version: 1

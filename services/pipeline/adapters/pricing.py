@@ -18,6 +18,7 @@ from __future__ import annotations
 # One row per landed default model; extend as adapters/models land. ESTIMATES — see the docstring.
 _PRICE_TABLE: dict[tuple[str, str], int] = {
     ("wavespeed", "wavespeed-ai/flux-2-pro/text-to-image"): 5,
+    ("fal", "fal-ai/flux-pro/v1.1"): 5,
     ("anthropic", "claude-sonnet-4"): 2,
     ("openrouter", "anthropic/claude-sonnet-4"): 2,
 }

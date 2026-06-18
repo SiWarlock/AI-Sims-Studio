@@ -13,14 +13,17 @@ from collections.abc import Callable
 
 from aisims_contracts.providers import ImageGenProvider
 
+from .fal import FalImageGenProvider
 from .wavespeed import WaveSpeedImageGenProvider
 
 # name → constructor. Static, not a self-registering global registry (parity with MOCK/LLM seams).
 IMAGEGEN_PROVIDERS: dict[str, Callable[..., ImageGenProvider]] = {
     "wavespeed": WaveSpeedImageGenProvider,
+    "fal": FalImageGenProvider,
 }
 
 __all__ = [
     "IMAGEGEN_PROVIDERS",
+    "FalImageGenProvider",
     "WaveSpeedImageGenProvider",
 ]

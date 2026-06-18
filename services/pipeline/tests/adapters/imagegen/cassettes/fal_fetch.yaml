@@ -1,0 +1,16 @@
+interactions:
+- request:
+    body: null
+    headers: {}
+    method: GET
+    uri: https://v3.fal.media/files/out/concept.png
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - image/webp
+    body:
+      string: RIFF____WEBPsynthetic-fal-concept-image
+version: 1

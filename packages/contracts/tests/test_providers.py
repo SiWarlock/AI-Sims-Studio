@@ -173,6 +173,21 @@ def test_providers_import_direction(intra_imports: Callable[[ModuleType], set[st
     assert imports.isdisjoint({"ipc", "domain", "responses"}), imports
 
 
+def test_provider_ref_fields_reject_empty() -> None:  # spec(§7)
+    """0.5b hardening: ProviderJobRef identifier fields (provider/model/jobId) reject "" — a
+    0-length provider/model/job id is invalid at the boundary (min_length=1)."""
+    base = {
+        "provider": "fal",
+        "model": "hunyuan3d-2.1",
+        "jobId": "job-1",
+        "submittedAt": datetime(2026, 6, 17, 12, 0, 0).isoformat(),
+    }
+    ProviderJobRef.model_validate(base)  # the all-present baseline is valid
+    for field in ("provider", "model", "jobId"):
+        with pytest.raises(ValidationError):
+            ProviderJobRef.model_validate({**base, field: ""})
+
+
 def test_providers_schema_snapshot() -> None:  # spec(§7)
     """§2.5-seam guard: the value-model schema == the checked-in snapshot (drift = failure).
 
@@ -181,5 +196,8 @@ def test_providers_schema_snapshot() -> None:  # spec(§7)
             json.dump(providers_schema(), open('tests/__snapshots__/providers.schema.json','w'), \
             indent=2, sort_keys=True)"
     """
+    # Pin the value-model set independently of the snapshot (0.5b: catches a silent model add/drop
+    # pre-regen — mirrors the workers/registries set-assertions).
+    assert set(providers_schema()) == {"ProviderJobRef", "ProviderUsage", "PollResult"}
     expected = json.loads(SNAPSHOT_PATH.read_text())
     assert providers_schema() == expected

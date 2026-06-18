@@ -58,9 +58,10 @@ class ProviderJobRef(_Provider):
     """The reconcile-spine handle to an async provider job (§7) — persisted in graph State +
     Postgres so a resume can poll/re-fetch. ``expiresAt`` drives the Tripo 24h re-download race."""
 
-    provider: str
-    model: str
-    jobId: str
+    # min_length=1 (0.5b): a present provider/model/job id is a real identifier, never blank.
+    provider: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    jobId: str = Field(min_length=1)
     submittedAt: datetime
     expiresAt: datetime | None = None
 

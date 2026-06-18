@@ -7,6 +7,9 @@
     "GET /projects": [
       "SYSTEM"
     ],
+    "GET /readiness": [
+      "SYSTEM"
+    ],
     "GET/PUT /settings": [
       "SYSTEM",
       "VALIDATION_FAILED"
@@ -111,7 +114,8 @@
     "POST /steps/{id}/rerun"
   ],
   "readOnlyEndpoints": [
-    "GET /projects"
+    "GET /projects",
+    "GET /readiness"
   ],
   "requestHeaders": {
     "additionalProperties": false,
@@ -176,6 +180,12 @@
         }
       },
       "title": "ListProjectsRequest",
+      "type": "object"
+    },
+    "GET /readiness": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "ReadinessRequest",
       "type": "object"
     },
     "GET/PUT /settings": {

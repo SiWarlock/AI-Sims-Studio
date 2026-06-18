@@ -1,9 +1,10 @@
 """The IPC REST response bodies (§4) — slice 0.4b, completing the frozen IPC contract.
 
-One named response model per the 14 §4 endpoints, each embedding the landed 0.4a domain entity
-(``Project`` / ``PipelineRun`` / ``ItemSpec`` / …) so each endpoint's success response can evolve
-additively without disturbing the embedded domain type (symmetry with ``ipc.REQUEST_MODELS``). A
-``RESPONSE_MODELS`` registry + ``responses_schema()`` producer back the ``spec(§4)`` snapshot.
+One named response model per the 15 §4 endpoints — the 14 sealed ones each embedding the landed
+0.4a domain entity (``Project`` / ``PipelineRun`` / ``ItemSpec`` / …) so each endpoint's success
+response can evolve additively without disturbing the embedded domain type (symmetry with
+``ipc.REQUEST_MODELS``), plus the additive post-seal ``ReadinessReport`` (GET /readiness, no domain
+entity). A ``RESPONSE_MODELS`` registry + ``responses_schema()`` back the ``spec(§4)`` snapshot.
 
 SHAPES only: the FastAPI routes that *return* these bodies are Phase 2 (sidecar); the TS client
 that consumes them is 0.6. Import direction (acyclic, §2.5): ``responses → {ipc, domain}`` and
@@ -25,7 +26,7 @@ from aisims_contracts.domain import (
     ValidationResult,
 )
 from aisims_contracts.error import ErrorEnvelope
-from aisims_contracts.ipc import Endpoint
+from aisims_contracts.ipc import Endpoint, ReadinessSubsystem, ReadyState
 
 
 class _Response(BaseModel):
@@ -116,10 +117,30 @@ class TestProviderResponse(_Response):
     error: ErrorEnvelope | None = None
 
 
-# The endpoint → response-model registry, parallel to ipc.REQUEST_MODELS (all 14 endpoints).
+class ReadinessCheck(_Response):
+    """One subsystem's readiness in the GET /readiness probe (§4/§18): a prerequisite + its state,
+    with an optional human ``detail`` and ``remediation`` the onboarding gate surfaces. Carries no
+    domain entity (a protocol/onboarding view); the enums are the §4 readiness vocab (ipc)."""
+
+    subsystem: ReadinessSubsystem
+    status: ReadyState
+    detail: str | None = None
+    remediation: str | None = None
+
+
+class ReadinessReport(_Response):
+    """GET /readiness response (§4) — the onboarding gate's system-readiness surface: an ``overall``
+    rollup + the per-subsystem ``checks``. ADDITIVE post-seal surface; embeds no domain entity."""
+
+    overall: ReadyState
+    checks: list[ReadinessCheck]
+
+
+# The endpoint → response-model registry, parallel to ipc.REQUEST_MODELS (all 15 endpoints).
 RESPONSE_MODELS: dict[Endpoint, TypeAdapter[Any]] = {
     Endpoint.CREATE_PROJECT: TypeAdapter(CreateProjectResponse),
     Endpoint.LIST_PROJECTS: TypeAdapter(ListProjectsResponse),
+    Endpoint.READINESS: TypeAdapter(ReadinessReport),
     Endpoint.START_OR_RESUME_RUN: TypeAdapter(RunResponse),
     Endpoint.GATE: TypeAdapter(GateResponse),
     Endpoint.REGENERATE: TypeAdapter(RegenerateResponse),

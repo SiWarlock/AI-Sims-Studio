@@ -2140,6 +2140,95 @@
       "title": "QaStatus",
       "type": "string"
     },
+    "ReadinessCheck": {
+      "additionalProperties": false,
+      "description": "One subsystem's readiness in the GET /readiness probe (\u00a74/\u00a718): a prerequisite + its state,\nwith an optional human ``detail`` and ``remediation`` the onboarding gate surfaces. Carries no\ndomain entity (a protocol/onboarding view); the enums are the \u00a74 readiness vocab (ipc).",
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "remediation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "$ref": "#/$defs/ReadyState"
+        },
+        "subsystem": {
+          "$ref": "#/$defs/ReadinessSubsystem"
+        }
+      },
+      "required": [
+        "subsystem",
+        "status"
+      ],
+      "title": "ReadinessCheck",
+      "type": "object"
+    },
+    "ReadinessReport": {
+      "additionalProperties": false,
+      "description": "GET /readiness response (\u00a74) \u2014 the onboarding gate's system-readiness surface: an ``overall``\nrollup + the per-subsystem ``checks``. ADDITIVE post-seal surface; embeds no domain entity.",
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ReadinessCheck"
+          },
+          "type": "array"
+        },
+        "overall": {
+          "$ref": "#/$defs/ReadyState"
+        }
+      },
+      "required": [
+        "overall",
+        "checks"
+      ],
+      "title": "ReadinessReport",
+      "type": "object"
+    },
+    "ReadinessRequest": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "ReadinessRequest",
+      "type": "object"
+    },
+    "ReadinessSubsystem": {
+      "description": "The system prerequisites the readiness probe reports on (\u00a718's 5 onboarding prerequisites).\nA protocol-level closed vocabulary; additive thereafter (a new subsystem extends the set).",
+      "enum": [
+        "postgres",
+        "blender",
+        "sims_install",
+        "mods_path",
+        "providers"
+      ],
+      "title": "ReadinessSubsystem",
+      "type": "string"
+    },
+    "ReadyState": {
+      "description": "The readiness state of a system prerequisite (\u00a74/\u00a718). A protocol-level closed vocabulary\n(like LogLevel/GateKind) \u2014 grows additively, with the \u00a717 tolerant-consumer pattern if needed.\n\n``ready`` = prerequisite satisfied; ``degraded`` = usable but sub-optimal (e.g. a provider key\npresent but unverified); ``blocked`` = a hard prerequisite the onboarding gate must resolve.",
+      "enum": [
+        "ready",
+        "degraded",
+        "blocked"
+      ],
+      "title": "ReadyState",
+      "type": "string"
+    },
     "RegenCleanupRequest": {
       "additionalProperties": false,
       "properties": {

@@ -34,6 +34,8 @@ from aisims_contracts.ipc import (
     IpcRequestHeaders,
     LogLevel,
     ProgressEvent,
+    ReadinessSubsystem,
+    ReadyState,
     StepStateEvent,
     ValidationEvent,
     ipc_schema,
@@ -92,9 +94,9 @@ def test_sse_error_event_embeds_errorenvelope() -> None:  # spec(§17)
 
 
 def test_rest_request_models_present() -> None:  # spec(§4)
-    """A request model exists for each of the 14 endpoints (the multi-mode ones are unions)."""
+    """A request model exists for each of the 15 endpoints (the multi-mode ones are unions)."""
     assert set(REQUEST_MODELS) == set(Endpoint)
-    assert len(Endpoint) == 14
+    assert len(Endpoint) == 15
 
 
 def test_idempotency_key_on_mutating_commands() -> None:  # spec(§4)
@@ -198,3 +200,76 @@ def test_ipc_schema_snapshot() -> None:  # spec(§4)
     """
     expected = json.loads(SNAPSHOT_PATH.read_text())
     assert ipc_schema() == expected
+
+
+# ===========================================================================================
+# Additive GET /readiness (contracts-012, item a) — the §4 readiness surface the UI onboarding
+# gate consumes. ADDITIVE-ONLY: it adds a new endpoint + new enums/models without perturbing any
+# pre-existing model, so the live §4 consumers (core / providers / mesh-export) are unaffected.
+# ===========================================================================================
+# The 14 endpoints frozen at the §4 seal — the additive-only baseline: the readiness slice may
+# ADD "GET /readiness" but must not perturb any of these (consumers-unaffected guarantee).
+PRE_READINESS_ENDPOINTS = {
+    "POST /projects",
+    "GET /projects",
+    "POST /projects/{id}/runs",
+    "POST /runs/{id}/gate",
+    "POST /items/{id}/regenerate",
+    "POST /items/{id}/include",
+    "POST /items/{id}/functional",
+    "POST /projects/{id}/validate",
+    "POST /projects/{id}/export",
+    "POST /projects/{id}/test-install",
+    "POST /steps/{id}/rerun",
+    "DELETE /jobs/{id}",
+    "GET/PUT /settings",
+    "POST /settings/providers/{p}/test",
+}
+
+
+def test_readiness_enums_membership() -> None:  # spec(§4)
+    """The two readiness StrEnums freeze their member sets (protocol enums like LogLevel/GateKind;
+    grow additively like ErrorCode, with the UI tolerant-consumer pattern if needed)."""
+    assert {member.value for member in ReadyState} == {"ready", "degraded", "blocked"}
+    assert {member.value for member in ReadinessSubsystem} == {
+        "postgres",
+        "blender",
+        "sims_install",
+        "mods_path",
+        "providers",
+    }
+
+
+def test_readiness_endpoint_registered_readonly() -> None:  # spec(§4)
+    """GET /readiness is an additive, read-only endpoint wired into every per-endpoint map; its
+    only ErrorCode is {SYSTEM}; the request body is empty (a GET, no body/query params)."""
+    assert Endpoint.READINESS.value == "GET /readiness"
+    assert Endpoint.READINESS in READ_ONLY_ENDPOINTS
+    assert Endpoint.READINESS in REQUEST_MODELS
+    assert ENDPOINT_ERROR_CODES[Endpoint.READINESS] == frozenset({ErrorCode.SYSTEM})
+    # the maps stay total over the endpoint set; the read/mutate partition still holds.
+    assert set(REQUEST_MODELS) == set(Endpoint)
+    assert set(ENDPOINT_ERROR_CODES) == set(Endpoint)
+    assert MUTATING_ENDPOINTS | READ_ONLY_ENDPOINTS == set(Endpoint)
+    assert MUTATING_ENDPOINTS.isdisjoint(READ_ONLY_ENDPOINTS)
+    assert Endpoint.READINESS not in MUTATING_ENDPOINTS
+
+
+def test_existing_snapshots_unchanged_except_readiness() -> None:  # spec(§4)
+    """Additive-only proof (IPC side): readiness ADDS keys without perturbing any pre-existing
+    endpoint, the read/mutate partition, or the SSE stream — so the live §4 consumers
+    (core / providers / mesh-export) are provably unaffected. The error/domain seams' byte-identity
+    is held by their own (unchanged) snapshot tests; providers/workers/registries change only by the
+    0.5b minLength tightening (item b), proven by their re-frozen snapshots + set-assertions."""
+    assert len(PRE_READINESS_ENDPOINTS) == 14
+    schema = ipc_schema()
+    # readiness is the ONLY new key across every per-endpoint map.
+    assert set(schema["requestModels"]) == PRE_READINESS_ENDPOINTS | {"GET /readiness"}
+    assert set(schema["endpointErrorCodes"]) == PRE_READINESS_ENDPOINTS | {"GET /readiness"}
+    # readiness joins the read-only set; the prior read-only membership (GET /projects) is intact.
+    assert set(schema["readOnlyEndpoints"]) == {"GET /projects", "GET /readiness"}
+    # readiness is REST-only: it mints NO SSE event, so the streamed union is byte-stable.
+    assert set(SSE_EVENT_MODELS) == EXPECTED_EVENT_TAGS
+    # the protocol constants the UI negotiates against are unchanged by the addition.
+    assert schema["contractVersion"] == "1.0"
+    assert schema["headers"] == {"token": TOKEN_HEADER, "idempotencyKey": IDEMPOTENCY_KEY_HEADER}

@@ -21,6 +21,7 @@ from aisims_contracts.providers import PollResult, PollStatus, ProviderJobRef, P
 
 from adapters._http import get_bytes, open_client, request_json
 from adapters.errors import ProviderError, build_envelope
+from adapters.pricing import estimate_cost
 from adapters.validation import (
     DEFAULT_MAX_CANDIDATES,
     DEFAULT_MAX_IMAGE_BYTES,
@@ -157,6 +158,13 @@ class WaveSpeedImageGenProvider:
         if status == "completed":
             outputs = payload.get("outputs")
             urls = [str(u) for u in outputs] if isinstance(outputs, list) else []
+            if usage is not None:
+                # cost attributed ONCE on success, alongside latency (§7). WaveSpeed's result has
+                # no inline cost field → table estimate (actual=None); unknown model → None.
+                # estimate_cost is pure (no I/O) so this post-guard line keeps poll non-raising.
+                usage = usage.model_copy(
+                    update={"costCents": estimate_cost(self.PROVIDER, self._model)}
+                )
             return PollResult(status=PollStatus.SUCCEEDED, progress=1.0, urls=urls, usage=usage)
         if status == "failed":
             return PollResult(

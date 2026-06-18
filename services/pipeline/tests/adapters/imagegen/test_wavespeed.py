@@ -32,6 +32,7 @@ _EXPECTED_CASSETTES = {
     "wavespeed_fetch_error",
     "wavespeed_fetch_wrongmagic",
     "wavespeed_poll_unknown",
+    "wavespeed_poll_completed",
 }
 
 
@@ -161,6 +162,52 @@ def test_usage_parsing_is_defensive() -> None:
     assert _usage({"timings": {"inference": "N/A"}}) is None
     assert _usage({"timings": {"inference": -5}}) is None
     assert _usage({}) is None
+
+
+def test_poll_succeeded_populates_cost_and_latency(
+    imagegen_cassette: Cassette, tmp_path: Path
+) -> None:
+    """spec(§7) — a SUCCEEDED poll's usage carries BOTH latencyMs (existing) and costCents (the new
+    table estimate for the default model)."""
+    provider = _provider(tmp_path)
+    with imagegen_cassette("wavespeed_poll_completed"):
+        result = provider.poll(_ref("job-done"))
+
+    assert result.status is PollStatus.SUCCEEDED
+    assert result.usage is not None
+    assert result.usage.latencyMs >= 0
+    assert result.usage.costCents is not None and result.usage.costCents >= 0
+
+
+def test_poll_pending_attributes_no_cost(imagegen_cassette: Cassette, tmp_path: Path) -> None:
+    """spec(§7) — cost is attributed once on success; a pending poll carries no cost."""
+    provider = _provider(tmp_path)
+    with imagegen_cassette("wavespeed_poll"):
+        result = provider.poll(_ref("job-123"))  # first interaction = processing
+
+    assert result.status in (PollStatus.SUBMITTED, PollStatus.RUNNING)
+    assert result.usage is None or result.usage.costCents is None
+
+
+def test_poll_succeeded_unknown_model_cost_none_no_raise(
+    imagegen_cassette: Cassette, tmp_path: Path
+) -> None:
+    """spec(§7) — an unknown model → costCents=None (no fabricated cost); poll does not raise
+    (defensive — lesson 10)."""
+    from adapters.imagegen import WaveSpeedImageGenProvider
+
+    provider = WaveSpeedImageGenProvider(
+        secrets=InMemorySecretsAccessor({"WAVESPEED_API_KEY": "x"}),
+        model="unknown/model-not-priced",
+        scratch_dir=tmp_path,
+    )
+    with imagegen_cassette("wavespeed_poll_completed"):
+        result = provider.poll(_ref("job-done"))  # must not raise
+
+    assert result.status is PollStatus.SUCCEEDED
+    assert result.usage is not None
+    assert result.usage.latencyMs >= 0
+    assert result.usage.costCents is None
 
 
 def test_submit_http_failure_raises(imagegen_cassette: Cassette, tmp_path: Path) -> None:

@@ -1,7 +1,8 @@
 /**
  * Mock-sidecar settings fixture (Track A): an in-memory /settings store. GET returns the current
- * view; PUT merges simsModsPath/telemetryEnabled and returns the updated view (so a write→read
- * round-trips). No real sidecar.
+ * view; PUT is FULL-REPLACE (§4) — the body IS the new resource, so an omitted field resets to its
+ * default (simsModsPath→null, telemetryEnabled→false). Modeling full-replace (not PATCH-merge)
+ * means a partial-PUT regression FAILS loudly here instead of being silently masked. No real sidecar.
  */
 import type {
   SettingsResponse,
@@ -31,10 +32,11 @@ export function makeSettingsSidecar(initial: SettingsResponse): SettingsSidecar 
     }
     if (url.endsWith("/settings") && method === "PUT") {
       const body = (init?.body ? JSON.parse(String(init.body)) : {}) as UpdateSettingsRequest;
-      const next: SettingsResponse = { ...settings };
-      if (typeof body.simsModsPath === "string") next.simsModsPath = body.simsModsPath;
-      if (typeof body.telemetryEnabled === "boolean") next.telemetryEnabled = body.telemetryEnabled;
-      settings = next;
+      // FULL-REPLACE: the body IS the new resource; an omitted field resets to its default.
+      settings = {
+        simsModsPath: body.simsModsPath ?? null,
+        telemetryEnabled: body.telemetryEnabled ?? false,
+      };
       return jsonResponse(settings);
     }
     return jsonResponse({ error: "unexpected" }, 404);

@@ -40,30 +40,34 @@ class RuleSpec(_Registry):
     ``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible
     so the freeze doesn't pre-empt the spike (the §11 analogue of the open-key rule)."""
 
-    kind: str
+    # min_length=1 (0.5b): kind is the rule's identifying tag, never blank (Inv6 keeps it open str).
+    kind: str = Field(min_length=1)
     params: dict[str, Any] = Field(default_factory=dict)
 
 
 # --- entry models (§11): open registries — id/key/name are str (Inv6), never closed enums ---
 class PlacementType(_Registry):
-    id: str
+    # min_length=1 (0.5b): id + donorRef (uniqueness key / ref) never blank; name stays plain.
+    id: str = Field(min_length=1)
     name: str
-    donorRef: str
+    donorRef: str = Field(min_length=1)
     footprintRules: list[RuleSpec] = Field(default_factory=list)
 
 
 class FunctionalArchetype(_Registry):
-    id: str
+    # min_length=1 (0.5b): id + donorRef (uniqueness key / ref) never blank; name stays plain.
+    id: str = Field(min_length=1)
     name: str
-    donorRef: str
+    donorRef: str = Field(min_length=1)
     tuningGraftRules: list[RuleSpec] = Field(default_factory=list)
     eligibilityRules: list[RuleSpec] = Field(default_factory=list)
     validationRules: list[RuleSpec] = Field(default_factory=list)
 
 
 class DonorMapping(_Registry):
-    key: str
-    donorObjectKey: str
+    # min_length=1 (0.5b): key (uniqueness key) + donorObjectKey (ref) are never blank.
+    key: str = Field(min_length=1)
+    donorObjectKey: str = Field(min_length=1)
     requiredResources: list[str] = Field(default_factory=list)
     tuningKeys: list[str] = Field(default_factory=list)
     preserveKeys: list[str] = Field(default_factory=list)

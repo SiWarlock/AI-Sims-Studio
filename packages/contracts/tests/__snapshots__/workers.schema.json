@@ -101,10 +101,12 @@
         "$ref": "#/$defs/BBox"
       },
       "jobId": {
+        "minLength": 1,
         "title": "Jobid",
         "type": "string"
       },
       "meshPath": {
+        "minLength": 1,
         "title": "Meshpath",
         "type": "string"
       },
@@ -330,14 +332,17 @@
     "description": "Inputs the sidecar hands the @s4tk export worker (\u00a79). ``geomBytesRef`` is the \u00a78 output\nthreaded through (the \u00a78\u2194\u00a79 GEOM-bytes flow); ``textures`` are scratch refs; ``tuningEdits`` is\nthe open OBJD-tuning edit bag; ``targetTGIKeys`` are the target resource keys.",
     "properties": {
       "donorRef": {
+        "minLength": 1,
         "title": "Donorref",
         "type": "string"
       },
       "geomBytesRef": {
+        "minLength": 1,
         "title": "Geombytesref",
         "type": "string"
       },
       "jobId": {
+        "minLength": 1,
         "title": "Jobid",
         "type": "string"
       },

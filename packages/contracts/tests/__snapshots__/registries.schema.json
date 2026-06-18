@@ -3,10 +3,12 @@
     "additionalProperties": false,
     "properties": {
       "donorObjectKey": {
+        "minLength": 1,
         "title": "Donorobjectkey",
         "type": "string"
       },
       "key": {
+        "minLength": 1,
         "title": "Key",
         "type": "string"
       },
@@ -45,10 +47,12 @@
         "additionalProperties": false,
         "properties": {
           "donorObjectKey": {
+            "minLength": 1,
             "title": "Donorobjectkey",
             "type": "string"
           },
           "key": {
+            "minLength": 1,
             "title": "Key",
             "type": "string"
           },
@@ -109,6 +113,7 @@
         "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
         "properties": {
           "kind": {
+            "minLength": 1,
             "title": "Kind",
             "type": "string"
           },
@@ -128,6 +133,7 @@
     "additionalProperties": false,
     "properties": {
       "donorRef": {
+        "minLength": 1,
         "title": "Donorref",
         "type": "string"
       },
@@ -139,6 +145,7 @@
         "type": "array"
       },
       "id": {
+        "minLength": 1,
         "title": "Id",
         "type": "string"
       },
@@ -175,6 +182,7 @@
         "additionalProperties": false,
         "properties": {
           "donorRef": {
+            "minLength": 1,
             "title": "Donorref",
             "type": "string"
           },
@@ -186,6 +194,7 @@
             "type": "array"
           },
           "id": {
+            "minLength": 1,
             "title": "Id",
             "type": "string"
           },
@@ -221,6 +230,7 @@
         "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
         "properties": {
           "kind": {
+            "minLength": 1,
             "title": "Kind",
             "type": "string"
           },
@@ -264,6 +274,7 @@
         "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
         "properties": {
           "kind": {
+            "minLength": 1,
             "title": "Kind",
             "type": "string"
           },
@@ -283,6 +294,7 @@
     "additionalProperties": false,
     "properties": {
       "donorRef": {
+        "minLength": 1,
         "title": "Donorref",
         "type": "string"
       },
@@ -294,6 +306,7 @@
         "type": "array"
       },
       "id": {
+        "minLength": 1,
         "title": "Id",
         "type": "string"
       },
@@ -316,6 +329,7 @@
         "additionalProperties": false,
         "properties": {
           "donorRef": {
+            "minLength": 1,
             "title": "Donorref",
             "type": "string"
           },
@@ -327,6 +341,7 @@
             "type": "array"
           },
           "id": {
+            "minLength": 1,
             "title": "Id",
             "type": "string"
           },
@@ -348,6 +363,7 @@
         "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
         "properties": {
           "kind": {
+            "minLength": 1,
             "title": "Kind",
             "type": "string"
           },
@@ -522,6 +538,7 @@
     "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
     "properties": {
       "kind": {
+        "minLength": 1,
         "title": "Kind",
         "type": "string"
       },

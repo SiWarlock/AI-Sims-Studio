@@ -113,9 +113,11 @@
           "$ref": "#/$defs/BBox"
         },
         "jobId": {
+          "minLength": 1,
           "type": "string"
         },
         "meshPath": {
+          "minLength": 1,
           "type": "string"
         },
         "params": {
@@ -465,9 +467,11 @@
       "additionalProperties": false,
       "properties": {
         "donorObjectKey": {
+          "minLength": 1,
           "type": "string"
         },
         "key": {
+          "minLength": 1,
           "type": "string"
         },
         "preserveKeys": {
@@ -720,12 +724,15 @@
       "description": "Inputs the sidecar hands the @s4tk export worker (\u00a79). ``geomBytesRef`` is the \u00a78 output\nthreaded through (the \u00a78\u2194\u00a79 GEOM-bytes flow); ``textures`` are scratch refs; ``tuningEdits`` is\nthe open OBJD-tuning edit bag; ``targetTGIKeys`` are the target resource keys.",
       "properties": {
         "donorRef": {
+          "minLength": 1,
           "type": "string"
         },
         "geomBytesRef": {
+          "minLength": 1,
           "type": "string"
         },
         "jobId": {
+          "minLength": 1,
           "type": "string"
         },
         "targetTGIKeys": {
@@ -944,6 +951,7 @@
       "additionalProperties": false,
       "properties": {
         "donorRef": {
+          "minLength": 1,
           "type": "string"
         },
         "eligibilityRules": {
@@ -953,6 +961,7 @@
           "type": "array"
         },
         "id": {
+          "minLength": 1,
           "type": "string"
         },
         "name": {
@@ -1776,6 +1785,7 @@
       "additionalProperties": false,
       "properties": {
         "donorRef": {
+          "minLength": 1,
           "type": "string"
         },
         "footprintRules": {
@@ -1785,6 +1795,7 @@
           "type": "array"
         },
         "id": {
+          "minLength": 1,
           "type": "string"
         },
         "name": {
@@ -2082,12 +2093,15 @@
           "default": null
         },
         "jobId": {
+          "minLength": 1,
           "type": "string"
         },
         "model": {
+          "minLength": 1,
           "type": "string"
         },
         "provider": {
+          "minLength": 1,
           "type": "string"
         },
         "submittedAt": {
@@ -2441,6 +2455,7 @@
       "description": "One rule in a registry entry's rule list \u2014 a thin open envelope: a ``kind`` tag + an open\n``params`` bag. The tuning-graft/eligibility grammar is pinned by spike S3; this stays flexible\nso the freeze doesn't pre-empt the spike (the \u00a711 analogue of the open-key rule).",
       "properties": {
         "kind": {
+          "minLength": 1,
           "type": "string"
         },
         "params": {

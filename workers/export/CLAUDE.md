@@ -181,7 +181,7 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [@s4tk reads macOS donors](LESSONS.md#1) | Read a 1GB+ Sims donor with `@s4tk` via `extractResources(filter, limit)` (decodes only matched resources), not `Package.from`; donors are READ-ONLY (read APIs only, never write the game packages); MMAP memory-bounded path = Phase-5 native-build optimization (pin: `test/donor/scan.test.ts`). |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

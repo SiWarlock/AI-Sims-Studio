@@ -3,6 +3,7 @@
 - **Date:** 2026-06-18
 - **Role:** ui-desktop-orchestrator (track: ui, Phase 7) — **context-cycle handoff** (outgoing orch at WARN/70%)
 - **Predecessor:** [`ui-003-…contracts-012….md`](./ui-003-2026-06-18-contracts-012-readiness-snapshot-codegen.md)
+- **Successor:** [`ui-005-…phase7-onboarding-settings-slices.md`](./ui-005-2026-06-18-phase7-onboarding-settings-slices.md)
 - **Audience:** the **fresh ui-desktop-orchestrator** (same name) who runs `/orchestrate-start` after this cycle.
   Re-orient off THIS doc + the **integration ledger** + session docs ui-001/002/003 + `IMPLEMENTATION_PLAN.md`.
 

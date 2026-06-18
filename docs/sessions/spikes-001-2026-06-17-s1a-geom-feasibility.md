@@ -3,7 +3,7 @@
 - **Date:** 2026-06-17
 - **Phase:** 1 (Feasibility spikes) · Track: **spikes** · Area: `workers/blender`
 - **Predecessor:** `docs/sessions/contract-004-2026-06-17-services-pipeline-phase0-tail.md` (Phase-0 SEAL — the contract freeze that unblocked the 6-track fork; cross-track fork point)
-- **Successor:** _(TBD — S1b `workers/export` clone-a-donor, blocked on Sims 4 install + donor)_
+- **Successor:** `docs/sessions/spikes-002-2026-06-17-s1b-donor-scan.md` (S1b donor-scan — @s4tk reads the EA-macOS donors)
 - **Tasks:** 1.1 (S1a) · **Briefs:** `docs/briefs/spikes-001-1.1-s1a-geom-harness.md` (@7955314e), `docs/briefs/spikes-002-1.1-s1a-env-ready-geom-probe.md` (@03944dfb)
 - **Commits:** `0d6215f` (S1a headless harness) · `aa6ce58` (env-ready hardening + real-format validator) · `0b0b6c9` (custom headless bpy GEOM writer)
 

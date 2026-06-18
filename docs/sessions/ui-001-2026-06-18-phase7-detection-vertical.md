@@ -4,6 +4,7 @@
 - **Role:** ui-desktop-orchestrator (track: ui, Phase 7)
 - **Type:** orchestrator round-recap (no implementer `/session-end` ran — checkpoint round)
 - **Predecessor:** none (first ui-track session doc)
+- **Successor:** [`ui-002-2026-06-18-phase7-foundation-onboarding-keychain.md`](./ui-002-2026-06-18-phase7-foundation-onboarding-keychain.md) (implementer `/session-end`)
 - **Round seal:** `origin/track/ui` — see the round commit hash in the Log.
 
 ## What was built (landed on `track/ui`)

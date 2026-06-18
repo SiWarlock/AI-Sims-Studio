@@ -96,3 +96,75 @@ The single-writer lock guards one active sidecar against a corrupting double-wri
 
 **Rule:** the single-writer lock holds for any LIVE owner PID; reclaim ONLY a dead PID (heartbeat is metadata, not a reclaim trigger) until Phase-2 adds atomic-acquire + a fencing token.
 **Enforce:** `pin: tests/engine/test_supervisor.py::test_single_writer_lock_live_owner_with_stale_heartbeat_not_reclaimed`.
+
+## <a id="9"></a>9. Graph `State` references domain by id + imports contract enums — never redefine a §12 type in `graph/`
+
+**Date:** 2026-06-17. **Source slice:** 2.1 (`graph/state.py`, §5/§12).
+
+The LangGraph `PipelineState` is a **graph-runtime** model, not a domain entity: it references the §12 entities **by id** and **imports** its enums (`GateKind`, `ItemState`, `StepState`) from `aisims_contracts` — it must NEVER redefine one locally in `graph/`. The landed shape is deliberately lean and references-only — `{projectId, runId, itemStates: dict[str, ItemState], providerJobRefs, gateCursor: GateKind | None}` at 2.1, growing to add `artifactRefs` + `pollErrors` (fetched scratch paths + §17 envelopes, both by step key) at 2.2 — every field an id, status enum, path, or contract-imported envelope, never an embedded entity body. This holds because of the §5 **ownership partition**: the checkpointer is authoritative for graph-execution **position only**, while the app repository (0.7 `PipelineRunRow`/`StepRow`) owns the entity rows — so State carries ids + status, not embedded bodies. Redefining a domain enum in `graph/` forks the frozen contract (the forbidden duplicate-contract pattern) and lets State + the store silently disagree. Note the import direction: a `services/pipeline` **consumer** importing `GateKind` from the `aisims_contracts` package namespace creates **no** `ipc↔domain` contracts-internal cycle, so the GateKind `ipc.py→domain.py` relocation carry-forward does **not** fire here (it fires only if a model *inside* `contracts/domain.py` needs `GateKind`).
+
+**Rule:** graph `State` references domain entities by id and imports their enums from `aisims_contracts`; never redefine a §12 entity/enum in `graph/` (checkpoint = graph-position-authoritative only; the repo owns entity rows).
+**Enforce:** `pin: tests/graph/test_state.py::test_pipeline_state_imports_contract_enums` + `::test_pipeline_state_references_entities_by_id`.
+
+## <a id="10"></a>10. Checkpointer = PG primary + separate-module SQLite-saver fallback; SQLite=unit, PG=env-gated
+
+**Date:** 2026-06-17. **Source slice:** 2.1 (`graph/checkpointer.py`, §5/ADR-002).
+
+`make_checkpointer` selects `langgraph-checkpoint-postgres` as the primary saver and falls back to the **SQLite saver in a separate module** when PG is unavailable (ADR-002, the build-start verification of open-Q #4), logging only a **credential-free DSN label** — never the raw DSN/password (rule-5; `_safe_dsn`, and the rule-5 grep can't catch a raw-DSN exception, so it's pinned by a caplog test). The SQLite saver is the deterministic **unit** path (Docker-free, CI-green); the PG path is **env-gated behind `AISIMS_TEST_DATABASE_URL`** and skips cleanly when unset — mirroring the 0.7 store test-DB strategy. PG↔SQLite **parity** (same interrupt→resume run → identical final State) is asserted so the fallback is behavior-equivalent, not a degraded mode.
+
+**Rule:** checkpointer = PG primary + separate-module SQLite-saver fallback (ADR-002); SQLite = deterministic unit path, PG = env-gated `AISIMS_TEST_DATABASE_URL`; log only a credential-free DSN label (rule-5).
+**Enforce:** `pin: tests/graph/test_checkpointer.py::test_make_checkpointer_prefers_pg_falls_back_to_sqlite` + `::test_make_checkpointer_fallback_log_redacts_dsn` (rule-5 regression).
+
+## <a id="11"></a>11. langgraph `add_node` under `mypy --strict` — localized `type: ignore[call-overload]`, never import private `StateNode`
+
+**Date:** 2026-06-17. **Source slice:** 2.1 (`graph/build.py`, §5).
+
+`StateGraph.add_node` with a Protocol-typed (or otherwise non-inferrable) node action can't have its `NodeInputT` inferred by `mypy --strict`, producing a `call-overload` error. The correct fix is a **localized `# type: ignore[call-overload]`** at the single `add_node` call site — **NOT** importing the private `langgraph.graph._node.StateNode` to satisfy the overload (a private symbol that can break on any langgraph minor bump). Keep the ignore narrow (the specific error code, one call site); annotate `build_graph`'s return as the public `CompiledStateGraph[...]`, not `Any`. Verified against **langgraph 1.2.5**: in this version `durability` is a **runtime** `invoke`/`stream` arg, **not** a `compile()` kwarg — so `build_graph` compiles checkpointer-only and the `'sync'` durability convention is documented for the 2.3 caller.
+
+**Rule:** under `mypy --strict`, a Protocol-typed langgraph `add_node` needs a localized `# type: ignore[call-overload]` — never import the private `langgraph.graph._node.StateNode`; type the return as the public `CompiledStateGraph`.
+**Enforce:** `pattern: from langgraph\.graph\._node import` (private-symbol import ban — added to the forbidden-patterns block); the localized ignore itself is `accepted: not mechanically pinnable beyond the import ban`.
+
+## <a id="12"></a>12. Two-phase cloud node — `@task` idempotent submit persists the ref before any side effect; never re-submit on resume (R9)
+
+**Date:** 2026-06-17. **Source slice:** 2.2 (`graph/cloud_node.py`, §5/§17).
+
+A cloud stage (one that calls an async provider) runs as **two LangGraph nodes**: a `<stage>` **submit node** that wraps `provider.submit` in a langgraph `@task` (functional API) — so the submit's RESULT (the `ProviderJobRef`) is **checkpointed** — and persists that ref into `PipelineState.providerJobRefs` **before** the poll phase; then a `<stage>_poll` **reconcile node** that reads the persisted ref, polls to a terminal `PollStatus`, and `fetch()`es outputs on success (into `artifactRefs`) or surfaces the §17 envelope **unchanged** on failure (into `pollErrors`). This is the **R9** guarantee (no double-billing under replay): on resume langgraph returns the **cached** @task result instead of re-running submit, so `provider.submit` is called **exactly once** (spy-proven across a SQLite-file restart) — two layers back it, the @task result-cache AND the State-persisted ref. `durability='sync'` **at invoke** (langgraph 1.2.5 runtime arg, Lesson 11) makes the checkpoint synchronous so a crash can't lose the ref. **Scope boundary:** R9 covers no-double-**submit** only — a mid-poll resume re-polls/re-fetches (a real provider re-downloads, the Tripo 24h race), which is the **2.4 reconciler's** decision-table territory (§6), not an R9 violation. **Mechanism note (for 2.3):** langgraph differentiates **same-named `@task` closures by graph position**, so `concept`'s and `mesh`'s submit tasks don't collide in the cache — a bare `@task` is safe across stages (no per-stage name mangling).
+
+**Rule:** cloud stages are two-phase — a `@task` idempotent submit (result-checkpointed) persists the `ProviderJobRef` into State before any side effect; the poll node reads the persisted ref; never re-submit on resume (R9 = no-double-submit; mid-poll re-fetch is 2.4's reconcile).
+**Enforce:** `pin: tests/graph/test_cloud_node.py::test_no_double_submit_on_resume`.
+
+## <a id="13"></a>13. Cloud nodes take an INJECTED provider — registry selection is the scheduler's job; never hard-code in `graph/`
+
+**Date:** 2026-06-17. **Source slice:** 2.2 (`graph/cloud_node.py`, `graph/build.py`, §5).
+
+A cloud node receives its provider by **injection** — `build_graph(checkpointer, *, providers: ProviderBundle | None)` where `ProviderBundle = Mapping[GateKind, CloudStageSpec]` — and `graph/` imports **no adapter module** (the provider Protocol types come from `aisims_contracts`). This keeps **rule 2** (no provider lock-in; the bakeoff intact) **structural**: the graph never names a concrete provider. `providers=None` leaves the 2.1 no-op topology untouched (prior tests stay green). The registry-based provider **selection** (config → registry → concrete adapter) is the **scheduler's job (2.3)**, not the graph's — the graph is provider-agnostic by construction. Tests inject a mock/spy provider; production injection wires at 2.3.
+
+**Rule:** cloud nodes take an injected Protocol-typed provider via `build_graph(providers=…)`; `graph/` imports no adapter — registry selection is the scheduler's job (2.3). Never hard-code a provider in `graph/`.
+**Enforce:** `pin: tests/graph/test_cloud_node.py::test_cloud_node_uses_injected_provider` + the existing rule-2 provider-lock-in forbidden-pattern grep.
+
+## <a id="14"></a>14. Bounded-parallel engine — a `ResourceKind`-tagged cap per hot path; block-and-queue, never unbounded fan-out
+
+**Date:** 2026-06-17. **Source slice:** 2.3 (`engine/scheduler.py`, §6).
+
+The job/run engine bounds item work by a **`ResourceKind`-tagged cap**: cloud-submit and local-Blender-subprocess are **separate** `asyncio.Semaphore`s (REQ-NF-101) — different hot paths (network vs subprocess), so saturating one must not throttle the other (proven by a mixed batch reaching 2+2 = 4 concurrent > either single cap). Concurrency is bounded by **semaphore `acquire`** (block-and-queue on saturation — the (cap+1)th unit WAITS, never errors, never exceeds the cap), never an unbounded `gather` fan-out. Caps are human-set config knobs (`SchedulerConfig`, `ge=1`). A `WorkUnit{key, kind, run: () -> Awaitable}` tags each unit's resource kind; `run_project` returns a `dict[key, UnitResult]`. The scheduler is **distinct from the graph** (§6) — a reusable primitive over an injected async `work_fn`; the graph-driving is the caller's job (2.4 run-start integration, `WorkUnit.run` is the plug-in point). **One-active-project** is an in-memory **REJECT** guard (`ProjectBusyError`, released in `finally`) — distinct from the 0.9 on-disk single-writer lock (process-level); don't conflate.
+
+**Rule:** bound item work by a `ResourceKind`-tagged cap (cloud-submit vs local-Blender = SEPARATE semaphores); block-and-queue via `acquire`, never an unbounded fan-out; caps are config knobs (≥1).
+**Enforce:** `pin: tests/engine/test_scheduler.py::test_two_caps_are_independent` + `::test_block_and_queue_on_saturation`.
+
+## <a id="15"></a>15. asyncio per-item failure isolation — catch `Exception`, NEVER `BaseException` (cancellation must propagate)
+
+**Date:** 2026-06-17. **Source slice:** 2.3 (`engine/scheduler.py`, §6).
+
+When isolating per-item failures across a concurrent batch (so one unit's error doesn't abort its siblings), capture each unit's outcome in a result map and catch **`Exception`** — **never** `BaseException`, a bare `except:`, or `gather(return_exceptions=True)` (which captures `BaseException` too). `asyncio.CancelledError` and `KeyboardInterrupt` are `BaseException`, not `Exception`: swallowing them breaks cooperative cancellation (the §17 cancel path, 2.5) and clean shutdown. So: per-unit `try: await run() except Exception as e: capture`; `UnitResult.error: Exception | None`. Any guard/lock the batch holds is released in a **`finally`** so a raised-or-cancelled run still clears it (no permanent wedge). **Open caveat (2.4):** plain `gather` leaves in-flight siblings **detached** when the batch is cancelled — once `run` holds real Blender-subprocess/cloud work (costly to orphan), the run-start wiring must wrap the batch in a `TaskGroup` / explicitly cancel siblings; mock work is harmless to orphan.
+
+**Rule:** async per-item failure isolation catches `Exception`, never `BaseException`/bare-`except`/`gather(return_exceptions=True)` — cancellation + interrupt must propagate; release held guards in `finally`.
+**Enforce:** `pin: tests/engine/test_scheduler.py::test_external_cancel_releases_guard` (real `task.cancel()` path) + the synthetic-raise isolation test.
+
+## <a id="16"></a>16. Startup reconciler — a pure decision-table over `(poll_status, artifact_present)`; inject the FS/provider deps
+
+**Date:** 2026-06-17. **Source slice:** 2.4 (`engine/reconciler.py`, §6).
+
+The startup reconciler is a **pure decision-table**: `decide(poll_status, artifact_present) -> {RE_POLL, RESUME, RE_FETCH, REGENERATE}` (§6 R-e) — pollable→re-poll, succeeded+present→resume, succeeded+missing→re-fetch, expired/failed→regenerate. The driver escalates a `RE_FETCH` whose re-`fetch()` fails (or a succeeded job with no urls) to **REGENERATE** ("re-fetch then regenerate"), and a poll that **raises** → REGENERATE (the conservative human-gated "offer regenerate"; the transient-vs-terminal reclassification → RE_POLL is the §17 taxonomy's job, 2.5). Keep it **deterministic** by **injecting** the side-effecting deps — the provider (poll+fetch) and an `artifact_exists(ref) -> bool` predicate — so the table is unit-testable with no real FS/network. Per-ref **failure isolation** catches `Exception` (not `BaseException`, Lesson 15) so one ref's poll-raise doesn't abort the batch. The reconciler is **decision-only** (returns the outcome map); the transactional "step FAILED" write + the regenerate re-enqueue are the boot wiring. Stale-lock recovery **reuses** the 0.9 dead-PID-only reclaim (Lesson 8) — a LIVE owner is never reclaimed.
+
+**Rule:** the startup reconciler is a pure `(poll_status, artifact_present) -> action` decision-table with INJECTED FS/provider deps; decision-only (returns outcomes, no writes); per-ref isolation catches `Exception`; reuse the dead-PID-only lock reclaim.
+**Enforce:** `pin: tests/engine/test_reconciler.py::test_decide_*` + `::test_reconcile_refetch_then_regenerate_on_expired_urls`.

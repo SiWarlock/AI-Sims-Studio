@@ -51,6 +51,7 @@ Don't paste these sections into the prompt. Grep the file:section, read only wha
 | Topic | File (relative to repo root) | Section |
 |---|---|---|
 | Pipeline orchestration (LangGraph) | `ARCHITECTURE.md` | §5 |
+| Domain model + state machines (§12 entities; graph `State` refs them by id) | `ARCHITECTURE.md` | §12 |
 | Job/run engine + supervisor | `ARCHITECTURE.md` | §6 |
 | Store & artifacts (Postgres + Alembic + versioning + sole-writer) | `ARCHITECTURE.md` | §13 |
 | Mock adapters + failure injection | `ARCHITECTURE.md` | §7 + §17 |
@@ -120,6 +121,7 @@ be expressed as a pattern carry a `pin:` (test ref) or `accepted:` note on the r
 # rule 3 (global item flag): \bself\.(item_done|all_items_ready|run_state)\s*=
 # rule 4 (worker DB/tree write): pin: tests/store/test_sidecar_sole_writer.py
 # rule 5 (secrets in State/logs/traces): (api_key|secret|token)\s*[:=].*(State|log\.|trace|span)
+# lesson 11 (private langgraph import ban): from langgraph\.graph\._node import
 ```
 
 <!-- ▲ END EXAMPLE BLOCK [id=forbidden-patterns] ▲ -->
@@ -193,6 +195,14 @@ Lessons start at §1.
 | 6 | 2026-06-17 | [Fail-open tracing vs fail-closed redaction](LESSONS.md#6) | tracing fails OPEN (drop+count, never block/raise); redaction fails CLOSED (placeholder, never egress raw) — opposite postures, both rule-5 |
 | 7 | 2026-06-17 | [Secrets-accessor chokepoint](LESSONS.md#7) | secrets through one accessor (never State/logs/traces); the redactor's GUARANTEE is accessor-registration, the pattern set is best-effort — register every secret (Phase-7) |
 | 8 | 2026-06-17 | [Single-writer lock reclaim](LESSONS.md#8) | a LIVE owner PID always holds; reclaim ONLY a dead PID (heartbeat is metadata, not a trigger) until Phase-2 adds atomic-acquire + fencing |
+| 9 | 2026-06-17 | [Graph State refs domain by id](LESSONS.md#9) | graph `State` references §12 entities by id + imports their enums from `aisims_contracts`; never redefine a domain type in `graph/` (checkpoint = position-only; repo owns entity rows) |
+| 10 | 2026-06-17 | [Checkpointer PG-primary/SQLite-fallback](LESSONS.md#10) | checkpointer = PG primary + separate-module SQLite-saver fallback (ADR-002); SQLite = unit path, PG = env-gated `AISIMS_TEST_DATABASE_URL`; log only a credential-free DSN label (rule-5) |
+| 11 | 2026-06-17 | [langgraph add_node mypy overload](LESSONS.md#11) | Protocol-typed langgraph `add_node` under `mypy --strict` needs a localized `# type: ignore[call-overload]` — never import the private `langgraph.graph._node.StateNode` |
+| 12 | 2026-06-17 | [Two-phase cloud node + R9](LESSONS.md#12) | cloud stages = `@task` idempotent submit (result-checkpointed) persists `ProviderJobRef` into State before any side effect → poll/reconcile node; never re-submit on resume (R9 = no-double-submit; mid-poll re-fetch is 2.4); same-named `@task` closures differ by graph position |
+| 13 | 2026-06-17 | [Cloud nodes take injected provider](LESSONS.md#13) | cloud nodes take an injected Protocol-typed provider via `build_graph(providers=…)`; `graph/` imports no adapter — registry selection is the scheduler's job (2.3); never hard-code a provider in `graph/` |
+| 14 | 2026-06-17 | [Bounded-parallel ResourceKind caps](LESSONS.md#14) | bound item work by a `ResourceKind`-tagged cap (cloud-submit vs local-Blender = SEPARATE semaphores); block-and-queue via `acquire`, never an unbounded fan-out; caps are config knobs (≥1) |
+| 15 | 2026-06-17 | [asyncio failure isolation catches Exception](LESSONS.md#15) | per-item failure isolation catches `Exception`, NEVER `BaseException`/bare-except/`gather(return_exceptions=True)` — cancellation must propagate; release held guards in `finally` |
+| 16 | 2026-06-17 | [Startup reconciler decision-table](LESSONS.md#16) | the reconciler is a pure `(poll_status, artifact_present)→{re-poll,resume,re-fetch→regenerate,regenerate}` table with INJECTED FS/provider deps; decision-only (no writes); per-ref isolation catches `Exception`; reuse the dead-PID-only lock reclaim |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

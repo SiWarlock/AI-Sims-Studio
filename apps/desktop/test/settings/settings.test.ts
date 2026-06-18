@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createIpcClient } from "../../src/ipc/client";
 import { IDEMPOTENCY_KEY_HEADER, TOKEN_HEADER } from "../../src/ipc/endpoints";
-import { loadSettings, persistModsPath } from "../../src/settings/settings";
+import { loadSettings, persistModsPath, persistTelemetryEnabled } from "../../src/settings/settings";
 import { makeSettingsSidecar } from "../fixtures/mock-settings";
 
 const BASE = "http://127.0.0.1:5599";
@@ -48,6 +48,68 @@ describe("Settings persistence over the frozen GET/PUT /settings contract (§4)"
       expect(["simsModsPath", "telemetryEnabled"]).toContain(key);
       expect(key).not.toMatch(/key|secret|token|password|credential/i);
     }
+  });
+
+  it("test_persist_telemetry_enabled_puts_and_round_trips — spec(§4) §18", async () => {
+    const sidecar = makeSettingsSidecar({ simsModsPath: null, telemetryEnabled: false });
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: sidecar.fetchImpl });
+
+    const updated = await persistTelemetryEnabled(client, true);
+    expect(updated.telemetryEnabled).toBe(true);
+
+    // Round-trip: a subsequent read returns the persisted flag.
+    const reread = await loadSettings(client);
+    expect(reread.telemetryEnabled).toBe(true);
+
+    const put = sidecar.calls.find((c) => (c.init?.method ?? "GET").toUpperCase() === "PUT");
+    expect(put).toBeDefined(); // the PUT was actually issued (guard before reading headers)
+    expect(new Headers(put?.init?.headers).get(TOKEN_HEADER)).toBe(TOKEN);
+  });
+
+  it("test_persist_telemetry_only_sets_telemetry_and_preserves_mods_path — spec(§4)", async () => {
+    const sidecar = makeSettingsSidecar({ simsModsPath: "/m/Mods", telemetryEnabled: true });
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: sidecar.fetchImpl });
+
+    const updated = await persistTelemetryEnabled(client, false);
+    expect(updated.telemetryEnabled).toBe(false); // direct return contract
+
+    const put = sidecar.calls.find((c) => (c.init?.method ?? "GET").toUpperCase() === "PUT");
+    const body = JSON.parse(String(put?.init?.body ?? "{}")) as Record<string, unknown>;
+    expect(Object.keys(body)).toEqual(["telemetryEnabled"]); // partial PUT — ONLY this field
+
+    // Merge assumption (open finding): the untouched simsModsPath survives the partial PUT.
+    const reread = await loadSettings(client);
+    expect(reread.simsModsPath).toBe("/m/Mods");
+    expect(reread.telemetryEnabled).toBe(false);
+  });
+
+  it("test_persist_telemetry_never_carries_a_secret — safety rule 5", async () => {
+    const sidecar = makeSettingsSidecar({ simsModsPath: null, telemetryEnabled: false });
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: sidecar.fetchImpl });
+
+    await persistTelemetryEnabled(client, true);
+
+    const put = sidecar.calls.find((c) => (c.init?.method ?? "GET").toUpperCase() === "PUT");
+    expect(put).toBeDefined();
+    const body = JSON.parse(String(put?.init?.body ?? "{}")) as Record<string, unknown>;
+    expect(Object.keys(body).length).toBeGreaterThan(0); // the secret-scan below must not be vacuous
+    for (const key of Object.keys(body)) {
+      expect(["simsModsPath", "telemetryEnabled"]).toContain(key);
+      expect(key).not.toMatch(/key|secret|token|password|credential/i);
+    }
+  });
+
+  it("test_persist_telemetry_put_carries_idempotency_key — spec(§4) R9", async () => {
+    const sidecar = makeSettingsSidecar({ simsModsPath: null, telemetryEnabled: false });
+    const client = createIpcClient({ baseUrl: BASE, token: TOKEN, fetchImpl: sidecar.fetchImpl });
+
+    await persistTelemetryEnabled(client, true);
+
+    const put = sidecar.calls.find((c) => (c.init?.method ?? "GET").toUpperCase() === "PUT");
+    expect(put).toBeDefined();
+    const putHeaders = new Headers(put?.init?.headers);
+    expect(putHeaders.get(TOKEN_HEADER)).toBe(TOKEN);
+    expect(putHeaders.get(IDEMPOTENCY_KEY_HEADER)).toBeTruthy();
   });
 
   it("test_settings_get_omits_idempotency_put_carries_both — spec(§4) R9", async () => {

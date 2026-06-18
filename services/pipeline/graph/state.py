@@ -9,7 +9,7 @@ frozen ``aisims_contracts`` package; none are redefined here.
 
 from __future__ import annotations
 
-from aisims_contracts import GateKind, ItemState, ProviderJobRef
+from aisims_contracts import ErrorEnvelope, GateKind, ItemState, ProviderJobRef
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -24,6 +24,12 @@ class PipelineState(BaseModel):
     itemStates: dict[str, ItemState] = Field(default_factory=dict)
     # Cloud job references by item/step id (populated by the two-phase cloud nodes, 2.2).
     providerJobRefs: dict[str, ProviderJobRef] = Field(default_factory=dict)
+    # Fetched output scratch-path refs by step key (the cloud poll node, 2.2) — echoes the
+    # domain Step.artifactRefs vocabulary; State-internal (paths, not entity rows).
+    artifactRefs: dict[str, list[str]] = Field(default_factory=dict)
+    # The §17 ErrorEnvelope surfaced by a failed/expired poll, by step key (never re-rolled);
+    # the reconcile DECISION (re-submit / regenerate) is 2.4.
+    pollErrors: dict[str, ErrorEnvelope] = Field(default_factory=dict)
     # The gate the run has most recently passed (None before the plan gate); the
     # authoritative ordered-gate cursor (Inv5).
     gateCursor: GateKind | None = None

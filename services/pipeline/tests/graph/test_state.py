@@ -15,7 +15,16 @@ from pydantic import ValidationError
 from graph.state import PipelineState
 
 # The lean, by-id checkpoint shape: ids + status enums + job refs + gate cursor.
-EXPECTED_FIELDS = {"projectId", "runId", "itemStates", "providerJobRefs", "gateCursor"}
+# artifactRefs/pollErrors added in 2.2 (still State-internal — fetched paths + poll envelopes).
+EXPECTED_FIELDS = {
+    "projectId",
+    "runId",
+    "itemStates",
+    "providerJobRefs",
+    "artifactRefs",
+    "pollErrors",
+    "gateCursor",
+}
 
 
 def test_pipeline_state_references_entities_by_id() -> None:

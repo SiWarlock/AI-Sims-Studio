@@ -1,14 +1,16 @@
-"""``build_graph`` — the resumable LangGraph StateGraph spine (task 2.1).
+"""``build_graph`` — the resumable LangGraph StateGraph spine (task 2.1 + 2.2).
 
-One no-op stage node per pipeline stage (plan→concept→mesh→overlay→export), each
-fronted by an ``interrupt()`` approval gate, wired linearly START→…→END. The real
-stage bodies (provider / two-phase cloud calls) land in 2.2; here they are pure
-placeholders. The gate nodes enforce the Inv5 ordering via ``graph.gates``.
+One node per pipeline stage (plan→concept→mesh→overlay→export), each fronted by an
+``interrupt()`` approval gate, wired linearly START→…→END. By default every stage is a
+no-op placeholder (2.1). When a ``CloudStageSpec`` is injected for a cloud stage
+(``concept``/``mesh``) the stage becomes a **two-phase cloud node** — a ``<stage>`` submit
+node + a ``<stage>_poll`` reconcile node (2.2) — ahead of its gate. The gate nodes enforce
+the Inv5 ordering via ``graph.gates``.
 
 durability: langgraph 1.x realizes ``durability`` as a runtime argument on
 ``invoke()`` / ``stream()`` — it is NOT a ``compile()`` parameter. The run-time caller
-(the 2.3 scheduler) passes ``durability="sync"`` for this gate-bearing graph so
-checkpoints survive process exit.
+(the 2.3 scheduler) passes ``durability="sync"`` for this gate-bearing graph so checkpoints
+(incl. the @task submit result) survive process exit.
 """
 
 from __future__ import annotations
@@ -22,8 +24,12 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import interrupt
 
+from graph.cloud_node import ProviderBundle, make_poll_node, make_submit_node
 from graph.gates import GATE_ORDER, GateOrderError, assert_gate_order
 from graph.state import PipelineState
+
+# The provider-backed stages — when injected, each becomes a two-phase cloud node (2.2).
+CLOUD_STAGES = frozenset({GateKind.CONCEPT, GateKind.MESH})
 
 # A GateKind-keyed hook invoked as each stage body runs. A test seam (the resume /
 # re-execution proof) that doubles as the §14 tracing node-instrumentation point.
@@ -84,26 +90,43 @@ def _make_gate_node(gate: GateKind) -> Callable[[PipelineState], NodeUpdate]:
 def build_graph(
     checkpointer: BaseCheckpointSaver[Any],
     *,
+    providers: ProviderBundle | None = None,
     on_stage: StageProbe | None = None,
 ) -> PipelineGraph:
     """Compile the 5-stage / 5-gate pipeline StateGraph bound to ``checkpointer``.
 
-    on_stage: optional GateKind-keyed hook invoked as each stage body runs — a test
-    seam (the resume / re-execution proof) that doubles as the §14 tracing hook.
+    providers: an injected GateKind→CloudStageSpec bundle (rule 2 — no hard-coded provider).
+    A cloud stage (concept/mesh) with an entry becomes a two-phase cloud node; without one it
+    stays a no-op placeholder (so 2.1's no-provider tests are unaffected). Registry-based
+    selection is 2.3.
+    on_stage: optional GateKind-keyed hook invoked as each NO-OP stage body runs — a test seam
+    (the resume / re-execution proof) that doubles as the §14 tracing hook.
 
     Returns the compiled graph. Invoke it with ``durability="sync"`` (see module note).
     """
+    # NOTE: langgraph's add_node overloads can't infer NodeInputT from a Protocol-typed node
+    # action under mypy --strict (1.x stubs) → localized call-overload ignores throughout.
     builder = StateGraph(PipelineState)
     prev: str = START
     for gate in GATE_ORDER:
         stage_name = gate.value
         gate_name = f"{gate.value}_gate"
-        # NOTE: langgraph's add_node overloads can't infer NodeInputT from a Protocol-typed
-        # node action under mypy --strict (1.x stubs) → localized call-overload ignores.
-        builder.add_node(stage_name, _make_stage_node(gate, on_stage))  # type: ignore[call-overload]
-        builder.add_node(gate_name, _make_gate_node(gate))  # type: ignore[call-overload]
-        builder.add_edge(prev, stage_name)
-        builder.add_edge(stage_name, gate_name)
+        spec = providers.get(gate) if providers is not None else None
+        if spec is not None and gate in CLOUD_STAGES:
+            # Two-phase cloud stage: submit → poll/reconcile → gate (2.2).
+            poll_name = f"{gate.value}_poll"
+            builder.add_node(stage_name, make_submit_node(gate, spec))  # type: ignore[call-overload]
+            builder.add_node(poll_name, make_poll_node(gate, spec))  # type: ignore[call-overload]
+            builder.add_node(gate_name, _make_gate_node(gate))  # type: ignore[call-overload]
+            builder.add_edge(prev, stage_name)
+            builder.add_edge(stage_name, poll_name)
+            builder.add_edge(poll_name, gate_name)
+        else:
+            # No-op placeholder stage → gate (2.1).
+            builder.add_node(stage_name, _make_stage_node(gate, on_stage))  # type: ignore[call-overload]
+            builder.add_node(gate_name, _make_gate_node(gate))  # type: ignore[call-overload]
+            builder.add_edge(prev, stage_name)
+            builder.add_edge(stage_name, gate_name)
         prev = gate_name
     builder.add_edge(prev, END)
     return builder.compile(checkpointer=checkpointer)

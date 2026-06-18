@@ -11,11 +11,14 @@
  * renderer build (Vite) lands in 7.3 (Q2).
  */
 import { randomBytes } from "node:crypto";
+import { accessSync, constants, existsSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { BrowserWindow, app, ipcMain } from "electron";
 
+import { isTopFrameSender, registerFsBridge } from "./fs-bridge";
 import { TOKEN_IPC_CHANNEL } from "./token-handoff";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
@@ -52,10 +55,22 @@ async function createWindow(): Promise<void> {
 app.whenReady().then(
   async () => {
     const token = mintLoopbackToken();
-    // Serve the token synchronously on demand; it never touches argv or any log sink.
+    // Serve the token synchronously on demand to the renderer's top frame only; it never touches
+    // argv or any log sink.
     ipcMain.on(TOKEN_IPC_CHANNEL, (event) => {
-      event.returnValue = token;
+      event.returnValue = isTopFrameSender(event.senderFrame) ? token : null;
     });
+    // Register the narrow read-only FS-probe handlers (7.2c) so onboarding detection is live.
+    registerFsBridge(
+      ipcMain,
+      {
+        existsSync: (p) => existsSync(p),
+        statSync: (p) => statSync(p),
+        accessSync: (p, m) => accessSync(p, m),
+        constants,
+      },
+      { homedir },
+    );
     await createWindow();
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) void createWindow().catch(() => undefined);

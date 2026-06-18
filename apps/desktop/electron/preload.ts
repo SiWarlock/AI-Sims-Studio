@@ -1,11 +1,12 @@
 /**
- * Electron preload (§4/§16): bridge the per-launch loopback token into the renderer over the
- * trusted parent→child channel. The token is fetched from main via a synchronous IPC call (NOT via
- * process.argv — argv is enumerable by other local processes, the §16 attack we mitigate) and
- * exposed to the renderer as a closure-captured getter only.
+ * Electron preload (§4/§16/§18): compose the single `window.aisims` bridge — the per-launch token
+ * (synchronous IPC, NOT process.argv — §16) as a closure-captured getter, ALONGSIDE the narrow
+ * read-only FS probe (7.2c, window.aisims.fs). Both ride one exposeInMainWorld via the handoff
+ * helper (contextBridge forbids exposing the same key twice).
  */
 import { contextBridge, ipcRenderer } from "electron";
 
+import { createFsBridge } from "./fs-bridge";
 import { TOKEN_IPC_CHANNEL, createLoopbackTokenChannel, type TokenSource } from "./token-handoff";
 
 const source: TokenSource = {
@@ -15,4 +16,6 @@ const source: TokenSource = {
   },
 };
 
-createLoopbackTokenChannel(source, contextBridge);
+const fs = createFsBridge((channel, ...args) => ipcRenderer.sendSync(channel, ...args));
+
+createLoopbackTokenChannel(source, contextBridge, { fs });

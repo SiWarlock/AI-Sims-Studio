@@ -21,14 +21,28 @@ export interface TokenSource {
   getToken(): string;
 }
 
+/**
+ * Additional read-only members composed onto the single `window.aisims` bridge object (e.g. the
+ * 7.2c fs probe). `contextBridge` forbids exposing the same key twice, so the token getter and any
+ * such members must ride ONE `exposeInMainWorld("aisims", …)` — this helper is that sole
+ * composition point.
+ */
+export type AisimsBridgeExtra = Record<string, unknown>;
+
 /** The contextBridge surface used here (matches Electron's `contextBridge`). */
 export interface TokenBridgeHost {
-  exposeInMainWorld(key: string, api: TokenBridge): void;
+  exposeInMainWorld(key: string, api: TokenBridge & AisimsBridgeExtra): void;
 }
 
-export function createLoopbackTokenChannel(source: TokenSource, bridge: TokenBridgeHost): void {
+export function createLoopbackTokenChannel(
+  source: TokenSource,
+  bridge: TokenBridgeHost,
+  extra: AisimsBridgeExtra = {},
+): void {
   const token = source.getToken();
   // Closure-capture the token in a getter; the bridged object carries no plain token property.
-  const api: TokenBridge = { getToken: () => token };
+  // Additional read-only members (e.g. the fs probe) compose alongside it under the same key.
+  // getToken is spread LAST so an `extra` member can never shadow/clobber the token getter.
+  const api: TokenBridge & AisimsBridgeExtra = { ...extra, getToken: () => token };
   bridge.exposeInMainWorld(TOKEN_BRIDGE_KEY, api);
 }

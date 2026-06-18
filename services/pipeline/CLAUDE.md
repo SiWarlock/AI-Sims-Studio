@@ -54,6 +54,7 @@ Don't paste these sections into the prompt. Grep the file:section, read only wha
 | Job/run engine + supervisor | `ARCHITECTURE.md` | §6 |
 | Store & artifacts (Postgres + Alembic + versioning + sole-writer) | `ARCHITECTURE.md` | §13 |
 | Mock adapters + failure injection | `ARCHITECTURE.md` | §7 + §17 |
+| Real provider adapters + output validation | `ARCHITECTURE.md` | §7 + §16 + §17 |
 | Observability + redaction chokepoint | `ARCHITECTURE.md` | §14 + §16 |
 | Lessons logged (full prose) | `services/pipeline/LESSONS.md` | by lesson # |
 
@@ -193,6 +194,9 @@ Lessons start at §1.
 | 6 | 2026-06-17 | [Fail-open tracing vs fail-closed redaction](LESSONS.md#6) | tracing fails OPEN (drop+count, never block/raise); redaction fails CLOSED (placeholder, never egress raw) — opposite postures, both rule-5 |
 | 7 | 2026-06-17 | [Secrets-accessor chokepoint](LESSONS.md#7) | secrets through one accessor (never State/logs/traces); the redactor's GUARANTEE is accessor-registration, the pattern set is best-effort — register every secret (Phase-7) |
 | 8 | 2026-06-17 | [Single-writer lock reclaim](LESSONS.md#8) | a LIVE owner PID always holds; reclaim ONLY a dead PID (heartbeat is metadata, not a trigger) until Phase-2 adds atomic-acquire + fencing |
+| 9 | 2026-06-17 | [Real-adapter recipe](LESSONS.md#9) | keys at call-time via `SecretsAccessor`; ALWAYS re-validate structured output (both str+dict branches) even under native structured mode; raise `ProviderError` classified in neutral `adapters/errors.py`; `maintainerDetail` bounded; record-once `filter_headers`-scrubbed cassettes; raw httpx over vendor SDKs |
+| 10 | 2026-06-17 | [Async adapter error channel](LESSONS.md#10) | real async adapters split 3 ways — `submit`/`fetch` RAISE, `poll` rides `PollResult.error` and NEVER raises (key-pull + usage parsing INSIDE poll's guard); shared transport is a neutral secret-free `adapters/_http.py` (key-pull/auth stay at the adapter) |
+| 11 | 2026-06-17 | [§16 provider-output validation](LESSONS.md#11) | provider-agnostic `validation.py` (magic-byte + count-cap) + streaming-cap/SSRF-hardened `get_bytes`; error-code split maps §17 retryable (content=MALFORMED retryable, SSRF/policy=VALIDATION_FAILED not); byte-cap MID-stream; SSRF floor rejects `not is_global` via injectable resolver, FAIL-CLOSED; `allowed_hosts` optional on top |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

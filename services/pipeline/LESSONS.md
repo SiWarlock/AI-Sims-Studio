@@ -97,7 +97,6 @@ The single-writer lock guards one active sidecar against a corrupting double-wri
 **Rule:** the single-writer lock holds for any LIVE owner PID; reclaim ONLY a dead PID (heartbeat is metadata, not a reclaim trigger) until Phase-2 adds atomic-acquire + a fencing token.
 **Enforce:** `pin: tests/engine/test_supervisor.py::test_single_writer_lock_live_owner_with_stale_heartbeat_not_reclaimed`.
 
-<<<<<<< HEAD
 ## <a id="9"></a>9. Graph `State` references domain by id + imports contract enums — never redefine a §12 type in `graph/`
 
 **Date:** 2026-06-17. **Source slice:** 2.1 (`graph/state.py`, §5/§12).
@@ -207,4 +206,3 @@ The §16 sidecar↔cloud trust boundary (validate provider output **before** it 
 
 **Rule:** §16 provider-output validation = a provider-agnostic `validation.py` (magic-byte + count-cap) + a streaming-cap/SSRF-hardened shared `get_bytes`; the error-code split maps §17 `retryable` (content=`MALFORMED_OUTPUT` retryable, SSRF/policy=`VALIDATION_FAILED` not-retryable); the byte-cap is mid-stream; the SSRF floor rejects `not is_global` via an injectable resolver, fail-closed; `allowed_hosts` is optional hardening on top, never the floor.
 **Enforce:** `pin: tests/adapters/test_http_hardening.py::test_get_bytes_streaming_cap_raises_midstream` + `::test_get_bytes_rejects_private_ip_host` + `::test_get_bytes_empty_resolution_fails_closed` + `::test_get_bytes_resolver_failure_fails_closed` + `tests/adapters/test_validation.py::test_validate_content_rejects_mismatch`.
->>>>>>> track/providers

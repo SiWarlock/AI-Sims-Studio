@@ -81,9 +81,8 @@ pnpm dev
 # Tests
 pnpm test:run
 
-# Quality
+# Quality (formatting is ESLint-enforced — there is no separate `format` script)
 pnpm lint
-pnpm format --check
 pnpm typecheck
 
 # Preflight (use before saying "done" with a feature)
@@ -113,6 +112,17 @@ be expressed as a pattern carry a `pin:` (test ref) or `accepted:` note on the r
 ```forbidden-patterns
 # rule 2: durable pipeline state in renderer (pin: thin-observer state test — derive run/item/step from SSE, not local cache)
 # rule 3: sidecar request missing the per-launch token  fetch\([^)]*\)(?!.*Authorization)
+# lesson 1: native EventSource for sidecar SSE — use fetch+ReadableStream w/ header-borne token  new[[:space:]]+EventSource\(
+# lesson 2: Zod boundary drift from the generated contract (pin: test_sse_schema_type_parity_with_generated)
+# lesson 3: loopback token via argv — use sync-IPC + closure-getter contextBridge  additionalArguments|process\.argv
+# lesson 4: React/jsdom in a UI-logic unit test — test logic over injected ports in node env (pin: onboarding/settings tests are framework-agnostic)
+# lesson 5: type-open IPC method override / post-hoc Idempotency-Key strip — gate the override + derive idempotency from the effective method  \.method\s*=|delete .*[Ii]dempotency
+# lesson 6: raw fs/Node handle exposed to the renderer — expose a narrow read-only sendSync bridge w/ allowlist + top-frame sender gate  exposeInMainWorld\([^)]*require\(|contextBridge[^]*\bfs\b\s*:
+# lesson 7: a keychain getProviderKey / read-back to the renderer — bridge is write-only (set/has/delete, no get)  getProviderKey|keychain[^]*\bget(Password|ProviderKey)\b.*renderer
+# lesson 8: raw keychain/secret error propagated (cause/message may echo the secret) — throw a fresh typed error, coarse redacted codes  catch[^]*throw (err|error|e)\b|cause:\s*(err|error|e)\b
+# lesson 9: a server-report gate that trusts report.overall or fails open on unknown status (pin: test_gate_derives_from_checks_not_overall + test_gate_fail_safe_on_unrecognized_status + test_gate_blocked_takes_precedence_over_unrecognized — decision derives from per-check status as a fail-safe allow-list, overall advisory)
+# lesson 10: maintainerDetail surfaced/rendered in a UI/renderer path (rule-5 — surface creatorMessage only)  \bmaintainerDetail\b
+# lesson 11: a full-replace PUT helper sending a partial body (data loss) (pin: test_persist_mods_path_read_modify_writes_full_object + test_persist_telemetry_read_modify_writes_full_object + test_mock_full_replace_resets_omitted_field — RMW the full resource; fixture models full-replace)
 ```
 
 <!-- ▲ END EXAMPLE BLOCK [id=forbidden-patterns] ▲ -->
@@ -180,7 +190,17 @@ Lessons start at §1.
 
 | # | Date | Topic | Rule (one-liner) |
 |--:|---|---|---|
-| | | | |
+| 1 | 2026-06-17 | [SSE transport](LESSONS.md#1) | UI↔sidecar SSE = `fetch`+`ReadableStream`, token in the `X-AISims-Token` header on open *and* reconnect; never native `EventSource` with a URL token. Guard replay with a `Last-Event-ID` cursor-drop **and** an idempotent projection. |
+| 2 | 2026-06-17 | [Zod boundary parity](LESSONS.md#2) | Zod is the runtime boundary; the generated contract is the type — a compile-time parity manifest pins `z.infer` to the generated members/enums so the validator can't drift. |
+| 3 | 2026-06-17 | [Loopback token handoff](LESSONS.md#3) | Serve the per-launch token via sync-IPC + a closure-getter `contextBridge`; never `process.argv`/`additionalArguments` (enumerable by other local processes). |
+| 4 | 2026-06-17 | [Framework-agnostic UI logic](LESSONS.md#4) | Test UI logic over injected ports (`node` env, no React); the React screen is a thin view whose visuals ride design-fixture review (D4), mapped `not-tested-because: visual/wiring`. |
+| 5 | 2026-06-17 | [Conflated GET/PUT client split](LESSONS.md#5) | A frozen endpoint that conflates GET/PUT under one id splits in the client via a **gated** method override (throws outside the named endpoint) + idempotency derived from the effective method — never type-open or strip-after-the-fact. |
+| 6 | 2026-06-17 | [Narrow renderer↔main bridge](LESSONS.md#6) | Renderer↔main host access = a narrow read-only bridge: `sendSync`, one allowlisted channel (`default→null`), read-only ops (`fs.access` for writability), a top-frame sender gate per handler; compose bridges into one `window.aisims` via the single helper (closure-getter last). |
+| 7 | 2026-06-18 | [Write-only keychain bridge](LESSONS.md#7) | Provider secrets go through a **write-only** main-process keychain bridge (`set`/`has`(bool)/`delete`, **no `get`**) named `(service="AISimsCreator", account=providerId)`; the sidecar reads, the renderer never reads back; keep the secret-name constants identical both ends. |
+| 8 | 2026-06-18 | [Rule-5 redaction discipline](LESSONS.md#8) | At a secret boundary: throw a fresh typed error (no raw `cause`) + coarse redacted codes; reject empty/missing secrets before the store; pin redaction with a secret-canary on **every** layer that touches the value (writer AND bridge), not just the innermost. |
+| 9 | 2026-06-18 | [Server-report gate decision](LESSONS.md#9) | A gate over a server-driven report derives its OWN decision from per-element status (fail-safe **allow-list**; precedence `blocked > indeterminate > ready`; empty/off-contract ⇒ `indeterminate`, never optimistic-ready); the server's `overall` roll-up is advisory, never the safety decision. |
+| 10 | 2026-06-18 | [ErrorEnvelope UI surfacing](LESSONS.md#10) | Render an `ErrorEnvelope`'s **`creatorMessage` only, never `maintainerDetail`** (rule-5 egress at the UI — make the view type structurally unable to hold maintainerDetail); normalize `code` via `parseErrorCode` (unknown/missing → `SYSTEM`); surface the message faithfully (incl. empty) rather than masking a producer violation with a fabricated fallback. |
+| 11 | 2026-06-18 | [Full-replace ⇒ read-modify-write](LESSONS.md#11) | A **full-replace** PUT helper must read-modify-write the full resource (GET → overlay the changed field → PUT all fields, each resolved explicitly so falsy/null survive); the fixture must model full-replace (omitted → default) + sibling-survival tests use **non-default** values so a silent drop fails loudly. Confirm PUT semantics from the contract, not the mock. |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 

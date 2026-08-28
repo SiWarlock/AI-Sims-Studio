@@ -25,6 +25,7 @@ dependencies = [
     # connected-component / centeredness scoring. Pillow + numpy (lighter than opencv). [3.2]
     "pillow>=10",
     "numpy>=2",
+    "keyring>=25.7.0",
 ]
 # The Postgres *server* + pgvector are bundled at deploy/packaging time (§19, Phase 10);
 # asyncpg/SQLAlchemy here are the client. The sidecar is the SOLE writer of Postgres +

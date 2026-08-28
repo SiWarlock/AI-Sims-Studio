@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Strict baseline CSP. connect-src is loopback-wide for now; 7.2 pins it to the negotiated
+         sidecar port once the handshake lands. Header-level CSP (onHeadersReceived) is a 7.2 add. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:*; base-uri 'none'; object-src 'none'; frame-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Sims Creator</title>
+  </head>
+  <body>
+    <!-- React mount point (Vite entry). main.tsx mounts the app + boots the 7.1 thin observer. -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -32,7 +32,7 @@ from aisims_contracts.domain import (
     ValidationResult,
 )
 from aisims_contracts.error import ErrorCategory, ErrorCode, ErrorEnvelope
-from aisims_contracts.ipc import Endpoint, GateKind
+from aisims_contracts.ipc import Endpoint, GateKind, ReadinessSubsystem, ReadyState
 from aisims_contracts.responses import (
     RESPONSE_MODELS,
     CancelJobResponse,
@@ -42,6 +42,8 @@ from aisims_contracts.responses import (
     GateResponse,
     IncludeItemResponse,
     ListProjectsResponse,
+    ReadinessCheck,
+    ReadinessReport,
     RegenerateResponse,
     RerunStepResponse,
     RunResponse,
@@ -95,9 +97,9 @@ def _error() -> ErrorEnvelope:
 
 
 def test_response_models_present() -> None:  # spec(§4)
-    """RESPONSE_MODELS covers 14 endpoints; each single-entity body embeds its A-table entity."""
+    """RESPONSE_MODELS covers 15 endpoints; each single-entity body embeds its A-table entity."""
     assert set(RESPONSE_MODELS) == set(Endpoint)
-    assert len(Endpoint) == 14
+    assert len(Endpoint) == 15
     # Single-entity endpoints embed exactly the documented domain entity (the A table).
     for _ep, (model, field, entity) in SINGLE_ENTITY_EMBEDS.items():
         assert field in model.model_fields, f"{model.__name__}.{field}"
@@ -193,3 +195,53 @@ def test_responses_schema_snapshot() -> None:  # spec(§4)
     """
     expected = json.loads(SNAPSHOT_PATH.read_text())
     assert responses_schema() == expected
+
+
+# ===========================================================================================
+# Additive GET /readiness response surface (contracts-012, item a) — ReadinessReport/ReadinessCheck.
+# ===========================================================================================
+def test_readiness_report_roundtrips() -> None:  # spec(§4)
+    """ReadinessReport/ReadinessCheck validate + round-trip; extra='forbid'; enum fields reject
+    out-of-set values; the report is registered in RESPONSE_MODELS for GET /readiness."""
+    report = ReadinessReport(
+        overall=ReadyState.DEGRADED,
+        checks=[
+            ReadinessCheck(subsystem=ReadinessSubsystem.POSTGRES, status=ReadyState.READY),
+            ReadinessCheck(
+                subsystem=ReadinessSubsystem.MODS_PATH,
+                status=ReadyState.BLOCKED,
+                detail="Sims Mods folder not set",
+                remediation="Pick your Sims 4 Mods folder in Settings.",
+            ),
+        ],
+    )
+    assert ReadinessReport.model_validate_json(report.model_dump_json()) == report
+    # exact field sets; detail/remediation optional.
+    assert set(ReadinessReport.model_fields) == {"overall", "checks"}
+    assert set(ReadinessCheck.model_fields) == {"subsystem", "status", "detail", "remediation"}
+    assert ReadinessCheck.model_fields["detail"].annotation == (str | None)
+    assert ReadinessCheck.model_fields["remediation"].annotation == (str | None)
+    # extra='forbid' on the report body AND the nested check element (inherited via _Response).
+    with pytest.raises(ValidationError):
+        ReadinessReport.model_validate({**report.model_dump(mode="json"), "bogus": 1})
+    with pytest.raises(ValidationError):
+        ReadinessCheck.model_validate({"subsystem": "postgres", "status": "ready", "bogus": 1})
+    # enum fields reject out-of-set values at the boundary.
+    with pytest.raises(ValidationError):
+        ReadinessCheck.model_validate({"subsystem": "not-a-subsystem", "status": "ready"})
+    with pytest.raises(ValidationError):
+        ReadinessCheck.model_validate({"subsystem": "postgres", "status": "not-a-state"})
+    # registered in the response map for the readiness endpoint; round-trips via its TypeAdapter.
+    assert Endpoint.READINESS in RESPONSE_MODELS
+    adapter = RESPONSE_MODELS[Endpoint.READINESS]
+    assert adapter.validate_json(adapter.dump_json(report)) == report
+
+
+def test_responses_additive_readiness_only() -> None:  # spec(§4)
+    """Additive-only proof (responses side): responses_schema() is total over the endpoint set and
+    gains ONLY the readiness key. Per-key byte-identity of the 14 pre-existing bodies is held by
+    test_responses_schema_snapshot (it compares the full re-frozen snapshot)."""
+    schema = responses_schema()
+    assert set(schema) == {ep.value for ep in Endpoint}
+    assert "GET /readiness" in schema
+    assert len([ep for ep in Endpoint if ep is not Endpoint.READINESS]) == 14

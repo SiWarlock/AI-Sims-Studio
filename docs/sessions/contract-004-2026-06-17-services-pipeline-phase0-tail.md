@@ -4,7 +4,8 @@
 - **Phase:** 0 (Foundations) — the `services/pipeline`-area tail; **completes Phase 0 (0.1–0.9)**
 - **Track:** contract · **Area:** services/pipeline · **Branch:** track/contract
 - **Predecessor:** [contract-003-2026-06-17-codegen-drift-gate.md](contract-003-2026-06-17-codegen-drift-gate.md)
-- **Successor:** [core-001-2026-06-18-phase2-spine.md](core-001-2026-06-18-phase2-spine.md) (core track — Phase 2 spine 2.1–2.4)
+- **Successor (core track):** [core-001-2026-06-18-phase2-spine.md](core-001-2026-06-18-phase2-spine.md) (Phase 2 spine 2.1–2.4)
+- **Successor (contract-readiness track):** [ui-003-2026-06-18-contracts-012-readiness-snapshot-codegen.md](ui-003-2026-06-18-contracts-012-readiness-snapshot-codegen.md) (post-seal contracts micro-slice on `track/contract-readiness`)
 
 ## Why this session existed
 

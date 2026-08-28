@@ -64,6 +64,30 @@ class GateKind(StrEnum):
     EXPORT = "export"
 
 
+class ReadyState(StrEnum):
+    """The readiness state of a system prerequisite (§4/§18). A protocol-level closed vocabulary
+    (like LogLevel/GateKind) — grows additively, with the §17 tolerant-consumer pattern if needed.
+
+    ``ready`` = prerequisite satisfied; ``degraded`` = usable but sub-optimal (e.g. a provider key
+    present but unverified); ``blocked`` = a hard prerequisite the onboarding gate must resolve.
+    """
+
+    READY = "ready"
+    DEGRADED = "degraded"
+    BLOCKED = "blocked"
+
+
+class ReadinessSubsystem(StrEnum):
+    """The system prerequisites the readiness probe reports on (§18's 5 onboarding prerequisites).
+    A protocol-level closed vocabulary; additive thereafter (a new subsystem extends the set)."""
+
+    POSTGRES = "postgres"
+    BLENDER = "blender"
+    SIMS_INSTALL = "sims_install"
+    MODS_PATH = "mods_path"
+    PROVIDERS = "providers"
+
+
 # ===========================================================================================
 # SSE event taxonomy (§4) — a discriminated union keyed on the ``event`` Literal tag. Each event
 # carries ``id`` (the resume cursor, Q4=str). status/severity fields are classified: PROTOCOL
@@ -176,10 +200,14 @@ SSE_EVENT_MODELS: dict[str, type[_SseEventBase]] = {
 # land in 0.4). The loopback token + idempotency key travel as headers (see IpcRequestHeaders).
 # ===========================================================================================
 class Endpoint(StrEnum):
-    """The 14 REST endpoints (§4). Value = ``METHOD path`` (GET/PUT /settings is one endpoint)."""
+    """The 15 REST endpoints (§4). Value = ``METHOD path`` (GET/PUT /settings is one endpoint).
+
+    ``READINESS`` is the additive, post-seal §4 surface the UI onboarding gate consumes (read-only,
+    no body); the original 14 are byte-identical so the live §4 consumers stay unaffected."""
 
     CREATE_PROJECT = "POST /projects"
     LIST_PROJECTS = "GET /projects"
+    READINESS = "GET /readiness"
     START_OR_RESUME_RUN = "POST /projects/{id}/runs"
     GATE = "POST /runs/{id}/gate"
     REGENERATE = "POST /items/{id}/regenerate"
@@ -299,9 +327,15 @@ class TestProviderRequest(_Wire):
     model: str | None = None
 
 
+class ReadinessRequest(_Wire):
+    # GET /readiness — no body / query params (like TestInstall); the probe is server-side.
+    pass
+
+
 REQUEST_MODELS: dict[Endpoint, TypeAdapter[Any]] = {
     Endpoint.CREATE_PROJECT: TypeAdapter(CreateProjectRequest),
     Endpoint.LIST_PROJECTS: TypeAdapter(ListProjectsRequest),
+    Endpoint.READINESS: TypeAdapter(ReadinessRequest),
     Endpoint.START_OR_RESUME_RUN: TypeAdapter(RunCommand),
     Endpoint.GATE: TypeAdapter(GateCommand),
     Endpoint.REGENERATE: TypeAdapter(RegenerateCommand),
@@ -316,10 +350,10 @@ REQUEST_MODELS: dict[Endpoint, TypeAdapter[Any]] = {
     Endpoint.TEST_PROVIDER: TypeAdapter(TestProviderRequest),
 }
 
-# Idempotency is required iff the endpoint mutates (R9). LIST_PROJECTS is the only pure read;
-# /health is separate (not a command). SETTINGS is one endpoint (GET/PUT) classified mutating —
-# its GET simply omits the optional key (the GET/PUT response split is a 0.4 concern).
-READ_ONLY_ENDPOINTS: frozenset[Endpoint] = frozenset({Endpoint.LIST_PROJECTS})
+# Idempotency is required iff the endpoint mutates (R9). LIST_PROJECTS + READINESS are the pure
+# reads (both GETs); /health is separate (not a command). SETTINGS is one endpoint (GET/PUT)
+# classified mutating — its GET simply omits the optional key (the GET/PUT split is a 0.4 concern).
+READ_ONLY_ENDPOINTS: frozenset[Endpoint] = frozenset({Endpoint.LIST_PROJECTS, Endpoint.READINESS})
 MUTATING_ENDPOINTS: frozenset[Endpoint] = frozenset(set(Endpoint) - READ_ONLY_ENDPOINTS)
 
 
@@ -330,6 +364,8 @@ MUTATING_ENDPOINTS: frozenset[Endpoint] = frozenset(set(Endpoint) - READ_ONLY_EN
 ENDPOINT_ERROR_CODES: dict[Endpoint, frozenset[ErrorCode]] = {
     Endpoint.CREATE_PROJECT: frozenset({ErrorCode.VALIDATION_FAILED, ErrorCode.SYSTEM}),
     Endpoint.LIST_PROJECTS: frozenset({ErrorCode.SYSTEM}),
+    # GET /readiness reports prereq states in its body; only an internal failure surfaces SYSTEM.
+    Endpoint.READINESS: frozenset({ErrorCode.SYSTEM}),
     Endpoint.START_OR_RESUME_RUN: frozenset({ErrorCode.VALIDATION_FAILED, ErrorCode.SYSTEM}),
     Endpoint.GATE: frozenset({ErrorCode.VALIDATION_FAILED, ErrorCode.SYSTEM}),
     Endpoint.REGENERATE: frozenset(

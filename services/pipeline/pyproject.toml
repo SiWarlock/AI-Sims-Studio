@@ -14,6 +14,9 @@ dependencies = [
     "asyncpg>=0.29",
     "aiosqlite>=0.20",
     "pydantic>=2",
+    "langgraph>=1.2.5",
+    "langgraph-checkpoint-postgres>=3.1.0",
+    "langgraph-checkpoint-sqlite>=3.1.0",
 ]
 # The Postgres *server* + pgvector are bundled at deploy/packaging time (§19, Phase 10);
 # asyncpg/SQLAlchemy here are the client. The sidecar is the SOLE writer of Postgres +

@@ -3,12 +3,21 @@ name = "aisims-blender-worker"
 version = "0.0.0"
 description = "AI Sims Creator Blender mesh/GEOM worker (bpy) — Phase-0 skeleton."
 requires-python = ">=3.13,<3.14"
-dependencies = []
+dependencies = [
+    # Frozen cross-process contracts (§2.5): the harness imports the §8/§9 worker models
+    # (BlenderJob / BlenderReport / GateMetrics / BBox) + ErrorEnvelope unchanged — no hand-rolled
+    # duplicate (forbidden). Blender's bundled-Python sys.path provisioning is an env-ready deploy
+    # concern (the worker uv env, where pytest runs, resolves it here).
+    "aisims-contracts",
+]
 # bpy==5.1.2 (Blender 5.1 bundled Python 3.13) is detected/bundled at deploy time (§19),
 # NOT installed as a wheel here. Integration tests run under `blender --background`.
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+aisims-contracts = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -20,7 +29,11 @@ select = ["E", "F", "I", "B", "UP", "W"]
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["tests"]
+explicit_package_bases = true
+files = ["geom", "spike_geom.py", "tests"]
+# blender_scripts/ is a bpy-only dir (runs under Blender's bundled Python, bpy/bmesh not in the
+# worker uv env) — excluded from `mypy --strict` (the script also carries an inline opt-out).
+exclude = "(^|/)blender_scripts/"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

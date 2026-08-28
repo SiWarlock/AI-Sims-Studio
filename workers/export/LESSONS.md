@@ -58,3 +58,37 @@ matched resources), not `Package.from`; donors are read-only (read APIs only, ne
 packages); the MMAP memory-bounded path is a Phase-5 native-build optimization. **Enforcement:**
 `pin: workers/export/test/donor/scan.test.ts` + the forbidden-grep rules 2/3 (no DB/canonical writes;
 no Mods-folder write); donor-read-only is by-construction (read APIs only).
+
+<a id="2"></a>
+## 2. Clone-an-EA-donor: swap GEOM under the donor key + `Resource.clone()` the preserve-set + atomic validated write — never mutate the donor
+
+**Date:** 2026-06-17.
+**Source slice:** 1.1 / S1b-clone (`src/clone/clone.ts`, `src/write/atomicWrite.ts`).
+
+The `@s4tk` clone-an-EA-donor mechanics that worked: **swap** the new GEOM bytes in under the donor's
+existing GEOM `ResourceKey` (as a `RawResource` — `@s4tk` doesn't model GEOM internals), **preserve**
+OBJD/FTPT/RIG/SLOT by `Resource.clone()` into the new package (byte-identical), and **never mutate the
+donor** (read it, clone out of it — the donor file is an immutable input, safety rule 4). Keeping the
+donor's TGI keys yields an **override clone** (the donor object renders as the new mesh in-game) — a
+valid placeability proof; a *re-keyed* new object (fresh GUIDs + ref-rewrite) is Phase-5.
+
+The **atomic validated write** (safety rule 4, its own security-reviewed commit): write to a temp path
+→ `fsync(file + dir)` → re-read the **on-disk** bytes → DBPF round-trip + structural validate (required
+resource set / swapped-GEOM-bytes survived / OBJD tuning resolves) → **atomic rename** into scratch. On
+validate OR I/O failure: **no rename, no orphaned temp, return `failed` (never throw)**. The write
+targets scratch only; a path under a live Mods folder is refused before any byte (rule 3). Validate the
+*on-disk* bytes, not an in-memory model — that's what proves the artifact, not the intent.
+
+**The load-bearing gotcha:** a Sims **FullBuild is a multi-thousand-object archive**. OBJD→MODL is exact
+(`OBJD.models` is a `ResourceKey[]`), but MODL→MLOD→GEOM lives inside the MODL/MLOD **RCOL binary**,
+which `@s4tk` decodes as opaque `RawResource`. So **type-collecting** `[COBJ,MLOD,GEOM]` is exact for a
+*single-object* donor but **over-collects the whole catalog** across a FullBuild — you cannot isolate
+ONE object's GEOM without the **MLOD→GEOM RCOL ref-walk**. Guard against building a wrong
+whole-catalog override (fail loud); the bounded RCOL ref-read (or a single-object donor) is what makes
+a live single-object artifact tractable.
+
+**Rule:** clone via swap-under-the-donor-key + `Resource.clone()` the preserve-set + never mutate the
+donor; atomic-write = temp→fsync(file+dir)→validate-on-disk-bytes→rename, no-partial/never-throw,
+scratch-only; isolating one object from a FullBuild needs the MLOD→GEOM RCOL ref-walk (type-collection
+over-collects). **Enforcement:** `pin: workers/export/test/write/atomicWrite.test.ts` (the rule-4 pins)
++ `test/clone/*` + the forbidden-grep rules 2/3.

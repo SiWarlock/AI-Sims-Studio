@@ -1,0 +1,16 @@
+interactions:
+- request:
+    body: null
+    headers: {}
+    method: GET
+    uri: https://cdn.wavespeed.ai/out/notimage.png
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - text/html
+    body:
+      string: '<html><body>upstream error - not an image</body></html>'
+version: 1

@@ -33,6 +33,10 @@ dev = [
     "mypy>=1.13",
     "ruff>=0.8",
     "pytest>=8.3",
+    # Cassette replay for the §7 real-adapter tests (record-once, replay-only in CI; auth
+    # headers scrubbed). httpx-aware; lives in the shared dev group because it's the only
+    # group root `uv sync --all-packages` installs by default (D19). [3.3]
+    "vcrpy>=6",
     # Git-hook runner: regenerates machine-valid pre-commit + commit-msg hooks
     # (replaces stale cross-machine residue) and gates ruff/mypy/conventional-commits.
     # See ./.pre-commit-config.yaml. Install: uv run pre-commit install

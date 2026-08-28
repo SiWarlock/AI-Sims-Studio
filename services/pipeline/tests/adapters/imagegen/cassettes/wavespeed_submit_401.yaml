@@ -1,0 +1,19 @@
+interactions:
+- request:
+    body: '{"prompt": "x", "seed": 1, "transparent_bg": true, "enable_base64_output":
+      false, "enable_sync_mode": false}'
+    headers:
+      content-type:
+      - application/json
+    method: POST
+    uri: https://api.wavespeed.ai/api/v3/wavespeed-ai/flux-2-pro/text-to-image
+  response:
+    status:
+      code: 401
+      message: Unauthorized
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"code": 401, "message": "invalid credentials"}'
+version: 1

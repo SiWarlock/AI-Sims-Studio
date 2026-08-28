@@ -1,0 +1,21 @@
+interactions:
+- request:
+    body: '{"prompt": "a red armchair", "seed": 12345, "transparent_bg": true, "enable_base64_output":
+      false, "enable_sync_mode": false}'
+    headers:
+      content-type:
+      - application/json
+    method: POST
+    uri: https://api.wavespeed.ai/api/v3/wavespeed-ai/flux-2-pro/text-to-image
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"code": 200, "message": "success", "data": {"id": "pred_synthetic_123",
+        "status": "created", "created_at": "2026-01-01T00:00:00.000Z", "urls": {"get":
+        "https://api.wavespeed.ai/api/v3/predictions/pred_synthetic_123/result"}}}'
+version: 1

@@ -1,0 +1,19 @@
+interactions:
+- request:
+    body: null
+    headers:
+      content-type:
+      - application/json
+    method: GET
+    uri: https://queue.fal.run/fal-ai/flux-pro/v1.1/requests/req-fail/status
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      content-type:
+      - application/json
+    body:
+      string: '{"status": "IN_PROGRESS", "request_id": "req-fail", "error": "generation
+        failed", "error_type": "GenerationError"}'
+version: 1

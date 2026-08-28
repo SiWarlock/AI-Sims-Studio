@@ -55,6 +55,7 @@ Don't paste these sections into the prompt. Grep the file:section, read only wha
 | Job/run engine + supervisor | `ARCHITECTURE.md` | §6 |
 | Store & artifacts (Postgres + Alembic + versioning + sole-writer) | `ARCHITECTURE.md` | §13 |
 | Mock adapters + failure injection | `ARCHITECTURE.md` | §7 + §17 |
+| Real provider adapters + output validation | `ARCHITECTURE.md` | §7 + §16 + §17 |
 | Observability + redaction chokepoint | `ARCHITECTURE.md` | §14 + §16 |
 | Lessons logged (full prose) | `services/pipeline/LESSONS.md` | by lesson # |
 
@@ -203,6 +204,9 @@ Lessons start at §1.
 | 14 | 2026-06-17 | [Bounded-parallel ResourceKind caps](LESSONS.md#14) | bound item work by a `ResourceKind`-tagged cap (cloud-submit vs local-Blender = SEPARATE semaphores); block-and-queue via `acquire`, never an unbounded fan-out; caps are config knobs (≥1) |
 | 15 | 2026-06-17 | [asyncio failure isolation catches Exception](LESSONS.md#15) | per-item failure isolation catches `Exception`, NEVER `BaseException`/bare-except/`gather(return_exceptions=True)` — cancellation must propagate; release held guards in `finally` |
 | 16 | 2026-06-17 | [Startup reconciler decision-table](LESSONS.md#16) | the reconciler is a pure `(poll_status, artifact_present)→{re-poll,resume,re-fetch→regenerate,regenerate}` table with INJECTED FS/provider deps; decision-only (no writes); per-ref isolation catches `Exception`; reuse the dead-PID-only lock reclaim |
+| 17 | 2026-06-17 | [Real-adapter recipe](LESSONS.md#17) | keys at call-time via `SecretsAccessor`; ALWAYS re-validate structured output (both str+dict branches) even under native structured mode; raise `ProviderError` classified in neutral `adapters/errors.py`; `maintainerDetail` bounded; record-once `filter_headers`-scrubbed cassettes; raw httpx over vendor SDKs |
+| 18 | 2026-06-17 | [Async adapter error channel](LESSONS.md#18) | real async adapters split 3 ways — `submit`/`fetch` RAISE, `poll` rides `PollResult.error` and NEVER raises (key-pull + usage parsing INSIDE poll's guard); shared transport is a neutral secret-free `adapters/_http.py` (key-pull/auth stay at the adapter) |
+| 19 | 2026-06-17 | [§16 provider-output validation](LESSONS.md#19) | provider-agnostic `validation.py` (magic-byte + count-cap) + streaming-cap/SSRF-hardened `get_bytes`; error-code split maps §17 retryable (content=MALFORMED retryable, SSRF/policy=VALIDATION_FAILED not); byte-cap MID-stream; SSRF floor rejects `not is_global` via injectable resolver, FAIL-CLOSED; `allowed_hosts` optional on top |
 
 <!-- Starts empty. Each row links to its `LESSONS.md` anchor. -->
 
